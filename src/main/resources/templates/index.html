@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ta" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>குரலகம் — Tamil Voice Assistant</title>
+
+    <!-- Tamil + English fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Tamil:wght@400;600&family=DM+Serif+Display&family=Inter:wght@300;400;500&display=swap">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --saffron:       #C8651B;
+            --saffron-light: #F5DEC8;
+            --saffron-dark:  #8A4210;
+            --jade:          #2D7A5E;
+            --jade-light:    #D0EDE4;
+            --maroon:        #7B1D2D;
+            --maroon-light:  #F2DCE0;
+            --cream:         #FBF7F0;
+            --cream-dark:    #F0E8D8;
+            --ink:           #1C1410;
+            --ink-muted:     #5C4A3A;
+            --border:        rgba(200, 101, 27, 0.22);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--cream-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+        }
+
+        /* Subtle background pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: repeating-linear-gradient(
+                45deg,
+                rgba(200,101,27,0.04) 0,
+                rgba(200,101,27,0.04) 1px,
+                transparent 0,
+                transparent 50%
+            );
+            background-size: 18px 18px;
+            pointer-events: none;
+        }
+
+        .app {
+            background: var(--cream);
+            border: 0.5px solid var(--border);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 680px;
+            overflow: hidden;
+            box-shadow: 0 8px 40px rgba(139, 66, 16, 0.12);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ── Header ─────────────────────────────── */
+        .header {
+            background: var(--saffron);
+            padding: 22px 28px 18px;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 0, transparent 50%);
+            background-size: 10px 10px;
+        }
+        .header-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 24px;
+            color: #fff;
+            position: relative;
+            z-index: 1;
+        }
+        .header-sub {
+            font-family: 'Noto Serif Tamil', serif;
+            font-size: 14px;
+            color: rgba(255,255,255,0.82);
+            margin-top: 4px;
+            position: relative;
+            z-index: 1;
+        }
+        .header-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            display: inline-block;
+            margin-right: 6px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* ── Language selector ───────────────────── */
+        .lang-bar {
+            display: flex;
+            gap: 8px;
+            padding: 12px 28px;
+            border-bottom: 0.5px solid var(--border);
+            background: #fff;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .lang-label { font-size: 12px; color: var(--ink-muted); }
+        .lang-chip {
+            font-size: 12px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 0.5px solid var(--border);
+            background: transparent;
+            color: var(--ink-muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .lang-chip:hover { background: var(--saffron-light); }
+        .lang-chip.active {
+            background: var(--saffron-light);
+            color: var(--saffron-dark);
+            border-color: var(--saffron);
+            font-weight: 500;
+        }
+
+        /* ── Chat messages ───────────────────────── */
+        .chat-area {
+            min-height: 300px;
+            max-height: 360px;
+            overflow-y: auto;
+            padding: 22px 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background: var(--cream);
+            scroll-behavior: smooth;
+        }
+
+        .msg {
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+            gap: 3px;
+        }
+        .msg.user { align-self: flex-end; align-items: flex-end; }
+        .msg.bot  { align-self: flex-start; align-items: flex-start; }
+
+        .msg-label {
+            font-size: 11px;
+            color: var(--ink-muted);
+            padding: 0 4px;
+        }
+        .msg-bubble {
+            padding: 11px 15px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.65;
+            color: var(--ink);
+        }
+        .msg.user .msg-bubble {
+            background: var(--saffron);
+            color: #fff;
+            border-radius: 16px 16px 4px 16px;
+        }
+        .msg.bot .msg-bubble {
+            background: #fff;
+            border: 0.5px solid var(--border);
+            border-radius: 16px 16px 16px 4px;
+        }
+        .msg-tamil {
+            font-family: 'Noto Serif Tamil', serif;
+            font-size: 12px;
+            display: block;
+            margin-top: 5px;
+            opacity: 0.82;
+        }
+        .msg.user .msg-tamil { color: rgba(255,255,255,0.88); }
+        .msg.bot  .msg-tamil { color: var(--saffron-dark); }
+
+        /* Typing indicator */
+        .thinking {
+            display: none;
+            align-self: flex-start;
+            gap: 5px;
+            padding: 12px 16px;
+            background: #fff;
+            border: 0.5px solid var(--border);
+            border-radius: 16px 16px 16px 4px;
+        }
+        .thinking.show { display: flex; }
+        .dot {
+            width: 7px; height: 7px;
+            background: var(--saffron);
+            border-radius: 50%;
+            animation: bounce 1.2s infinite;
+        }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%,80%,100% { transform: translateY(0); opacity: 0.35; }
+            40%          { transform: translateY(-5px); opacity: 1; }
+        }
+
+        /* ── Controls area ───────────────────────── */
+        .controls {
+            padding: 16px 28px 22px;
+            border-top: 0.5px solid var(--border);
+            background: #fff;
+        }
+
+        .error-box {
+            display: none;
+            background: #FEF2F2;
+            border: 0.5px solid #FCA5A5;
+            border-radius: 8px;
+            padding: 9px 13px;
+            font-size: 13px;
+            color: #991B1B;
+            margin-bottom: 12px;
+        }
+        .error-box.show { display: block; }
+
+        .transcript-box {
+            background: var(--cream);
+            border: 0.5px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            min-height: 46px;
+            margin-bottom: 13px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+        .transcript-icon { color: var(--saffron); font-size: 15px; flex-shrink: 0; }
+        .transcript-text {
+            flex: 1;
+            font-size: 14px;
+            color: var(--ink);
+            background: transparent;
+            border: none;
+            outline: none;
+            font-family: inherit;
+        }
+        .transcript-text::placeholder { color: var(--ink-muted); font-style: italic; }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        /* Mic button */
+        .mic-btn {
+            width: 54px; height: 54px;
+            border-radius: 50%;
+            background: var(--saffron);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s, transform 0.1s;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .mic-btn:hover  { background: var(--saffron-dark); }
+        .mic-btn:active { transform: scale(0.95); }
+        .mic-btn.listening { background: var(--maroon); }
+        .mic-btn.listening::after {
+            content: '';
+            position: absolute;
+            width: 70px; height: 70px;
+            border-radius: 50%;
+            border: 2px solid var(--maroon);
+            animation: ripple 1s infinite;
+        }
+        @keyframes ripple {
+            from { transform: scale(0.82); opacity: 0.7; }
+            to   { transform: scale(1.45); opacity: 0; }
+        }
+        .mic-btn svg { width: 22px; height: 22px; }
+
+        /* Send button */
+        .send-btn {
+            flex: 1;
+            padding: 14px;
+            background: var(--jade);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.15s;
+            font-family: inherit;
+        }
+        .send-btn:hover:not(:disabled) { opacity: 0.88; }
+        .send-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+        /* Speak button */
+        .speak-btn {
+            padding: 14px 16px;
+            background: transparent;
+            border: 0.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 13px;
+            color: var(--saffron-dark);
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+        .speak-btn:hover:not(:disabled) { background: var(--saffron-light); }
+        .speak-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+        /* ── Status bar ──────────────────────────── */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 28px;
+            border-top: 0.5px solid var(--border);
+            background: var(--cream);
+        }
+        .status-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: #D97706;
+            flex-shrink: 0;
+        }
+        .status-dot.ok  { background: var(--jade); }
+        .status-dot.err { background: var(--maroon); }
+        .status-text { font-size: 12px; color: var(--ink-muted); }
+        .model-tag {
+            margin-left: auto;
+            font-size: 11px;
+            color: var(--ink-muted);
+            border: 0.5px solid var(--border);
+            padding: 2px 9px;
+            border-radius: 20px;
+        }
+
+        /* ── Responsive ──────────────────────────── */
+        @media (max-width: 480px) {
+            .header { padding: 18px 20px 14px; }
+            .chat-area, .controls, .lang-bar, .status-bar { padding-left: 18px; padding-right: 18px; }
+            .speak-btn { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-title">
+            <span class="header-dot"></span>Tamil Voice Assistant
+        </div>
+        <div class="header-sub">குரலகம் — Powered by Groq AI</div>
+    </div>
+
+    <!-- Language bar -->
+    <div class="lang-bar">
+        <span class="lang-label">Language:</span>
+        <button class="lang-chip active" onclick="setLang('ta-IN','Tamil')">Tamil (தமிழ்)</button>
+        <button class="lang-chip" onclick="setLang('hi-IN','Hindi')">Hindi (हिंदी)</button>
+        <button class="lang-chip" onclick="setLang('te-IN','Telugu')">Telugu (తెలుగు)</button>
+        <button class="lang-chip" onclick="setLang('kn-IN','Kannada')">Kannada (ಕನ್ನಡ)</button>
+    </div>
+
+    <!-- Chat messages -->
+    <div class="chat-area" id="chat">
+        <div class="msg bot">
+            <span class="msg-label">குரலகம் (Assistant)</span>
+            <div class="msg-bubble">
+                வணக்கம்! I'm Kuralargam, your Tamil voice assistant. Press the mic and speak — I'll understand and respond in Tamil.
+                <span class="msg-tamil">(Hello! I am ready to help you.)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Typing indicator (inside chat flow) -->
+    <div class="thinking" id="thinking" style="margin: 0 28px 16px;">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <div class="error-box" id="errBox"></div>
+
+        <div class="transcript-box">
+            <span class="transcript-icon">💬</span>
+            <input type="text" class="transcript-text" id="transcriptInput" 
+                   placeholder="Type or speak in Tamil..." 
+                   autocomplete="off"
+                   oninput="checkInput()"
+                   onkeydown="if(event.key === 'Enter') sendMessage()">
+        </div>
+
+        <div class="btn-row">
+            <!-- Mic button -->
+            <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="Tap to speak">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="1" width="6" height="11" rx="3"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8"  y1="23" x2="16" y2="23"/>
+                </svg>
+            </button>
+
+            <!-- Send button -->
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+                Send to Groq →
+            </button>
+
+            <!-- Speak response button -->
+            <button class="speak-btn" id="speakBtn" onclick="speakLast()" disabled>
+                🔊 Speak
+            </button>
+        </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+        <div class="status-dot ok" id="statusDot"></div>
+        <span class="status-text" id="statusText">Ready — tap mic to begin</span>
+        <span class="model-tag" id="modelTag">Groq · ta-IN</span>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*[# th:utext="''" /]*/
+
+    // ── State ────────────────────────────────────
+    let currentLang     = 'ta-IN';
+    let currentLangName = 'Tamil';
+    let mediaRecorder   = null;
+    let audioChunks     = [];
+    let isRecording     = false;
+    let lastBotText     = '';
+
+    // ── Language switching ────────────────────────
+    function setLang(code, name) {
+        currentLang     = code;
+        currentLangName = name;
+        document.querySelectorAll('.lang-chip').forEach(c => c.classList.remove('active'));
+        if (window.event) window.event.target.classList.add('active');
+        document.getElementById('modelTag').textContent = 'Groq · ' + code;
+        setStatus('Language set to ' + name, 'ok');
+    }
+
+    // ── UI helpers ───────────────────────────────
+    function setStatus(msg, type) {
+        document.getElementById('statusText').textContent = msg;
+        const dot = document.getElementById('statusDot');
+        dot.className = 'status-dot' + (type ? ' ' + type : '');
+    }
+
+    function showError(msg) {
+        const box = document.getElementById('errBox');
+        box.textContent = msg;
+        box.classList.add('show');
+        setTimeout(() => box.classList.remove('show'), 6000);
+    }
+
+    function addMessage(role, text, translation) {
+        const chat = document.getElementById('chat');
+        const msg  = document.createElement('div');
+        msg.className = 'msg ' + role;
+
+        const label  = document.createElement('span');
+        label.className = 'msg-label';
+        label.textContent = role === 'user' ? 'நீங்கள் (You)' : 'குரலகம் (Assistant)';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'msg-bubble';
+        bubble.textContent = text;
+
+        if (translation) {
+            const tr = document.createElement('span');
+            tr.className = 'msg-tamil';
+            tr.textContent = translation;
+            bubble.appendChild(tr);
+        }
+
+        msg.appendChild(label);
+        msg.appendChild(bubble);
+        chat.appendChild(msg);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    // ── Microphone / STT (Groq Whisper) ──────────
+    async function toggleMic() {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            await startRecording();
+        }
+    }
+
+    async function startRecording() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showError("Your browser does not support audio recording.");
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunks.push(e.data);
+            };
+
+            mediaRecorder.onstart = () => {
+                isRecording = true;
+                document.getElementById('micBtn').classList.add('listening');
+                const inp = document.getElementById('transcriptInput');
+                inp.value = '';
+                inp.placeholder = 'Listening...';
+                setStatus('Listening — tap mic again to finish', '');
+            };
+
+            mediaRecorder.onstop = async () => {
+                isRecording = false;
+                document.getElementById('micBtn').classList.remove('listening');
+                setStatus('Converting speech to text...', 'ok');
+                
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                await performTranscription(audioBlob);
+            };
+
+            mediaRecorder.start();
+        } catch (err) {
+            console.error("Mic Error:", err);
+            showError("Could not access microphone. Ensure permissions are granted.");
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            // Stop all tracks to release the microphone (turns off the red light)
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+    }
+
+    async function performTranscription(blob) {
+        const formData = new FormData();
+        formData.append('audio', blob);
+        formData.append('language', currentLang);
+
+        try {
+            const res = await fetch('/api/transcribe', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                const inp = document.getElementById('transcriptInput');
+                inp.value = data.text;
+                setStatus('Thinking...', 'ok');
+                checkInput();
+                
+                // Auto-trigger send for a seamless voice experience
+                await sendMessage();
+            } else {
+                throw new Error(data.error || "Transcription failed");
+            }
+        } catch (err) {
+            console.error("Transcription Error:", err);
+            setStatus('Mic error', 'err');
+            showError("Groq Whisper error: " + err.message);
+            resetTranscript();
+        }
+    }
+
+    function checkInput() {
+        const val = document.getElementById('transcriptInput').value.trim();
+        document.getElementById('sendBtn').disabled = (val === '');
+    }
+
+    function resetTranscript() {
+        const inp = document.getElementById('transcriptInput');
+        inp.value = '';
+        inp.placeholder = 'Type or speak in Tamil...';
+        document.getElementById('sendBtn').disabled = true;
+    }
+
+    // ── Send to Groq (LLM Chat) ──────────────────
+    async function sendMessage() {
+        const inp = document.getElementById('transcriptInput');
+        const textToSend = inp.value.trim();
+        if (!textToSend) return;
+
+        resetTranscript();
+
+        addMessage('user', textToSend);
+        setStatus('Sending to Groq...', '');
+        document.getElementById('thinking').classList.add('show');
+        document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+
+        try {
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message:      textToSend,
+                    language:     currentLang,
+                    languageName: currentLangName
+                })
+            });
+
+            document.getElementById('thinking').classList.remove('show');
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                setStatus('Error from server', 'err');
+                showError(data.error || 'Unknown server error.');
+                return;
+            }
+
+            lastBotText = data.reply;
+            addMessage('bot', data.reply, data.translation);
+            document.getElementById('speakBtn').disabled = false;
+            setStatus('Ready', 'ok');
+
+        } catch (err) {
+            document.getElementById('thinking').classList.remove('show');
+            setStatus('Network error', 'err');
+            showError('Could not reach the server: ' + err.message);
+        }
+    }
+
+    // ── Text-to-Speech (Output) ──────────────────
+    function speakLast() {
+        if (!lastBotText) return;
+        if (window.speechSynthesis.speaking) {
+            window.speechSynthesis.cancel();
+            document.getElementById('speakBtn').textContent = '🔊 Speak';
+            return;
+        }
+
+        const utt  = new SpeechSynthesisUtterance(lastBotText);
+        utt.lang   = currentLang;
+        utt.rate   = 0.9;
+        utt.pitch  = 1.05;
+
+        const voices     = window.speechSynthesis.getVoices();
+        const langCode   = currentLang.split('-')[0];
+        const indicVoice = voices.find(v => v.lang.startsWith(langCode))
+                        || voices.find(v => v.lang.includes('IN'))
+                        || null;
+        if (indicVoice) utt.voice = indicVoice;
+
+        utt.onstart = () => {
+            setStatus('Speaking...', 'ok');
+            document.getElementById('speakBtn').textContent = '⏹ Stop';
+        };
+        utt.onend = () => {
+            setStatus('Ready', 'ok');
+            document.getElementById('speakBtn').textContent = '🔊 Speak';
+        };
+
+        window.speechSynthesis.speak(utt);
+    }
+
+    // Pre-load voices for TTS
+    if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    }
+</script>
+
+</body>
+</html>
