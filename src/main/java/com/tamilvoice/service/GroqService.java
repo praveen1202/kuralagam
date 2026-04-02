@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.tamilvoice.config.GroqConfig;
 import com.tamilvoice.model.ChatRequest;
 import com.tamilvoice.model.ChatResponse;
+import com.tamilvoice.model.TranscriptionResult;
 import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,14 +61,17 @@ public class GroqService {
                     .header("Content-Type", "application/json")
                     .build();
 
+            long startTime = System.currentTimeMillis();
             try (Response response = httpClient.newCall(httpRequest).execute()) {
+                long duration = System.currentTimeMillis() - startTime;
                 String responseBody = response.body() != null ? response.body().string() : "";
 
                 if (!response.isSuccessful()) {
-                    log.error("Groq API error {}: {}", response.code(), responseBody);
+                    log.error("Groq API error {}: {} (Took {}ms)", response.code(), responseBody, duration);
                     return ChatResponse.error("API error " + response.code() + ". Check your API key.");
                 }
 
+                log.info("Groq LLM Response received in {}ms. Raw Length: {}", duration, responseBody.length());
                 return parseResponse(responseBody);
             }
 
@@ -82,17 +86,19 @@ public class GroqService {
 
     /**
      * Convert audio data to text using Groq Whisper.
+     * Returns a TranscriptionResult containing both the text and the STT latency,
+     * so the controller can pass timing data to DataCaptureService and the frontend.
      */
-    public String transcribe(byte[] audioData, String languageCode) {
+    public TranscriptionResult transcribe(byte[] audioData, String languageCode) {
         log.info("Transcribing audio — size: {} bytes, lang context: {}", audioData.length, languageCode);
-        
+
         // Extract language prefix (e.g. ta-IN -> ta)
-        String lang = (languageCode != null && languageCode.contains("-")) 
-                      ? languageCode.split("-")[0] 
+        String lang = (languageCode != null && languageCode.contains("-"))
+                      ? languageCode.split("-")[0]
                       : "ta";
 
         RequestBody fileBody = RequestBody.create(audioData, MediaType.parse("audio/webm"));
-        
+
         RequestBody requestBody = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart("model", config.getAudioModel())
@@ -106,18 +112,20 @@ public class GroqService {
                 .post(requestBody)
                 .build();
 
+        long startTime = System.currentTimeMillis();
         try (Response response = httpClient.newCall(request).execute()) {
+            long duration = System.currentTimeMillis() - startTime;
             String responseBody = response.body() != null ? response.body().string() : "";
 
             if (!response.isSuccessful()) {
-                log.error("Groq Whisper error {}: {}", response.code(), responseBody);
+                log.error("Groq Whisper error {}: {} (Took {}ms)", response.code(), responseBody, duration);
                 throw new RuntimeException("Transcription failed: " + responseBody);
             }
 
             JsonNode root = objectMapper.readTree(responseBody);
             String transcript = root.path("text").asText().trim();
-            log.info("Transcription successful: {}", transcript);
-            return transcript;
+            log.info("Transcription successful in {}ms: \"{}\"", duration, transcript);
+            return new TranscriptionResult(transcript, duration);
 
         } catch (Exception e) {
             log.error("Error during Whisper transcription", e);
@@ -150,26 +158,53 @@ public class GroqService {
     }
 
     /**
-     * Build a culturally aware system prompt for the chosen Indic language.
+     * Build the domain-restricted system prompt for the TN Health & Education assistant.
+     *
+     * Domain scope (Phase 1 baseline — no RAG yet, LLM knowledge only):
+     *   - Tamil Nadu government Health schemes (CMCHIS, Dr. Kalaignar Insurance,
+     *     free medicines, government hospital services, maternal health programmes, etc.)
+     *   - Tamil Nadu government Education schemes (scholarships, free uniforms,
+     *     mid-day meals, Pudhumai Penn, government college admissions, etc.)
+     *
+     * Out-of-domain questions receive a polite decline in the target language.
+     * This guardrail is intentionally strict so our Phase 1 evaluation data reflects
+     * only relevant interactions, making quality measurement meaningful.
      */
     private String buildSystemPrompt(ChatRequest req) {
         return String.format("""
-            You are "Kuralargam" (குரலகம்), a warm and helpful voice assistant for speakers of %s.
+            You are "Kuralargam" (குரலகம்), a voice assistant that helps people in Tamil Nadu
+            understand government Health and Education schemes in %s.
+
             The user communicates via voice — their speech has been converted to text.
 
+            YOUR DOMAIN — answer ONLY questions about:
+            1. Tamil Nadu government HEALTH schemes:
+               Examples: CMCHIS (Chief Minister's Comprehensive Health Insurance Scheme),
+               Dr. Kalaignar Insurance Scheme, free medicine programme, government hospital
+               services, maternal and child health programmes, free dialysis, cancer screening.
+            2. Tamil Nadu government EDUCATION schemes:
+               Examples: scholarships (SC/ST, OBC, minority), free school uniforms and books,
+               mid-day meal scheme, Pudhumai Penn scheme for girls, government college fee
+               concessions, Amma Unavagam, library and digital access programmes.
+
             STRICT RESPONSE FORMAT:
-            Line 1: Your response written entirely in %s native script (e.g. தமிழ் for Tamil).
-            Line 2: English translation in parentheses, e.g. (I will help you with that.)
+            Line 1: Your response written entirely in %s native script.
+            Line 2: English translation in parentheses, e.g. (This scheme provides free medicine.)
 
             RULES:
-            - Keep responses SHORT — 1 to 3 sentences maximum. This is a voice interface.
-            - Be warm, respectful, and conversational.
-            - Use culturally appropriate language for %s speakers.
+            - Keep responses SHORT — 2 to 3 sentences maximum. This is a voice interface.
+            - Be warm, respectful, and use simple language accessible to rural users.
+            - Always name the specific scheme when relevant.
+            - If the question is outside TN Health or Education schemes, politely decline in %s
+              and explain you can only help with TN government health and education schemes.
+              Do NOT answer general knowledge, politics, entertainment, or other topics.
             - NEVER add extra lines, disclaimers, or preambles — just the two lines above.
             - If the user speaks in English, still respond in %s script first, then translate.
             """,
-            req.getLanguageName(), req.getLanguageName(),
-            req.getLanguageName(), req.getLanguageName()
+            req.getLanguageName(),
+            req.getLanguageName(),
+            req.getLanguageName(),
+            req.getLanguageName()
         );
     }
 

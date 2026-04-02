@@ -16,6 +16,10 @@ public class ChatRequest {
     private String language = "ta-IN";       // BCP-47 language code
     private String languageName = "Tamil";   // Human-readable name
 
+    // Phase 1: passed by frontend when input came from voice (Whisper STT).
+    // 0 means the user typed the message manually.
+    private long sttDurationMs = 0;
+
     public ChatRequest() {}
 
     public ChatRequest(String message, String language, String languageName) {
@@ -32,4 +36,7 @@ public class ChatRequest {
 
     public String getLanguageName() { return languageName; }
     public void setLanguageName(String languageName) { this.languageName = languageName; }
+
+    public long getSttDurationMs() { return sttDurationMs; }
+    public void setSttDurationMs(long sttDurationMs) { this.sttDurationMs = sttDurationMs; }
 }
