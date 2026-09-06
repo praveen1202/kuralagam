@@ -1,0 +1,138 @@
+[
+  {
+    "id": "cmchis",
+    "name": "Chief Minister's Comprehensive Health Insurance Scheme (CMCHIS)",
+    "tamilName": "முதல்வரின் விரிவான சுகாதார காப்பீட்டுத் திட்டம்",
+    "category": "health",
+    "keywords": ["cmchis", "chief minister health", "health insurance", "hospital", "treatment", "surgery", "mudalvar", "insurance", "free treatment", "5 lakh", "kathaiyaachi", "comprehensive health"],
+    "summary": "CMCHIS provides free health insurance coverage up to ₹5 lakh per year per family for government hospital treatment including surgeries, implants, and follow-up care. Eligibility: families with annual income below ₹72,000 (rationcard holders). Coverage includes 1,016 medical procedures across 226 empanelled hospitals in Tamil Nadu."
+  },
+  {
+    "id": "kalaignar_insurance",
+    "name": "Dr. Kalaignar Insurance Scheme for Life Saving Treatments",
+    "tamilName": "கலைஞர் காப்பீட்டுத் திட்டம்",
+    "category": "health",
+    "keywords": ["kalaignar", "kalaignar insurance", "life saving", "cancer", "heart", "kidney", "organ", "transplant", "dialysis insurance"],
+    "summary": "Dr. Kalaignar Insurance Scheme covers life-saving treatments for cancer, heart disease, kidney failure and organ transplants up to ₹5 lakh. Beneficiaries are ration card holders not covered under CMCHIS. Treatment available at empanelled private and government hospitals."
+  },
+  {
+    "id": "free_medicine",
+    "name": "Tamil Nadu Free Medicine Scheme",
+    "tamilName": "தமிழ்நாடு இலவச மருந்து திட்டம்",
+    "category": "health",
+    "keywords": ["free medicine", "medicine", "drugs", "pharmacy", "government hospital medicine", "ilavasam marunthu", "TNMSC", "medicines free"],
+    "summary": "All government hospitals in Tamil Nadu provide free essential medicines to outpatients and inpatients. Over 600 essential drugs are available free of cost through Tamil Nadu Medical Services Corporation (TNMSC). Patients need only a prescription from the government doctor."
+  },
+  {
+    "id": "free_dialysis",
+    "name": "Free Dialysis Programme",
+    "tamilName": "இலவச சிறுநீரக சுத்திகரிப்பு (டயாலிசிஸ்) திட்டம்",
+    "category": "health",
+    "keywords": ["dialysis", "kidney", "siruniiraga", "renal", "free dialysis", "kidney failure", "dialysis centre"],
+    "summary": "Tamil Nadu government provides free dialysis to kidney failure patients at 175+ government hospitals and Primary Health Centres. Patients requiring regular dialysis can register at their nearest government hospital. Both haemodialysis and peritoneal dialysis are covered."
+  },
+  {
+    "id": "makkalai_thedi",
+    "name": "Makkalai Thedi Maruthuvam (Doorstep Healthcare)",
+    "tamilName": "மக்களை தேடி மருத்துவம்",
+    "category": "health",
+    "keywords": ["makkalai thedi", "doorstep", "home visit", "village health", "aanganwadi", "primary health", "community health", "doctor home"],
+    "summary": "Makkalai Thedi Maruthuvam sends healthcare teams including doctors, nurses and health workers to villages and urban slums for doorstep checkups. Covers chronic disease screening, maternal care, elderly care, and basic diagnostics. Beneficiaries receive follow-up treatment referrals to PHCs or government hospitals."
+  },
+  {
+    "id": "muthulakshmi_maternity",
+    "name": "Muthulakshmi Reddy Maternity Benefit Scheme",
+    "tamilName": "முத்துலட்சுமி ரெட்டி மகப்பேறு நலத் திட்டம்",
+    "category": "health",
+    "keywords": ["muthulakshmi", "maternity", "pregnancy", "makaperu", "pregnant", "delivery", "antenatal", "birth", "mother", "newborn", "magaperu"],
+    "summary": "Pregnant women from families earning below ₹72,000 per year receive ₹18,000 cash assistance in installments under this scheme. Covers nutrition support, antenatal checkups and institutional delivery. Apply at the nearest government hospital or health sub-centre with ration card and income certificate."
+  },
+  {
+    "id": "cradle_baby",
+    "name": "Cradle Baby Scheme (Pen Pirandhal Pongal)",
+    "tamilName": "தொட்டில் குழந்தை திட்டம் (பெண் பிறந்தால் பொங்கல்)",
+    "category": "health",
+    "keywords": ["cradle", "girl child", "pen", "female baby", "abandon", "cradle scheme", "girl baby"],
+    "summary": "Under the Cradle Baby Scheme, parents can anonymously place unwanted girl babies in cradles placed at government hospitals. The child is then adopted through legal procedures. This scheme prevents female infanticide and abandonment."
+  },
+  {
+    "id": "cancer_screening",
+    "name": "Free Cancer Screening Programme",
+    "tamilName": "இலவச புற்றுநோய் பரிசோதனை திட்டம்",
+    "category": "health",
+    "keywords": ["cancer", "screening", "putrrnoi", "cervical", "breast", "oral", "cancer test", "detection", "biopsy"],
+    "summary": "Tamil Nadu government offers free cancer screening camps for cervical, breast and oral cancers at government hospitals and PHCs. Early detection tests are done free of cost. Patients diagnosed with cancer are referred to government oncology centres for free treatment under CMCHIS."
+  },
+  {
+    "id": "pudhumai_penn",
+    "name": "Pudhumai Penn Scheme",
+    "tamilName": "புதுமைப் பெண் திட்டம்",
+    "category": "education",
+    "keywords": ["pudhumai penn", "girl scholarship", "1000 rupees", "college girl", "women education", "government college girl", "penn scheme"],
+    "summary": "Girls who studied from Class 6 to 12 in Tamil Nadu government schools and join government-aided colleges receive ₹1,000 per month as scholarship under Pudhumai Penn. The amount is directly credited to the student's bank account. Apply through the college with school transfer certificate and ration card."
+  },
+  {
+    "id": "free_uniform_books",
+    "name": "Free Uniform, Books and School Supplies Scheme",
+    "tamilName": "இலவச சீருடை, புத்தகம் மற்றும் பள்ளி பொருட்கள் திட்டம்",
+    "category": "education",
+    "keywords": ["uniform", "books", "free books", "school", "sirrudai", "stationery", "school supplies", "notebook", "government school"],
+    "summary": "All students enrolled in Tamil Nadu government schools receive free uniforms (4 sets), textbooks, notebooks, schoolbag, geometry box, colour pencils, and atlas. Distributed at the start of every academic year through the school. No application needed — automatic for enrolled students."
+  },
+  {
+    "id": "midday_meal",
+    "name": "Chief Minister's Nutritious Meal Programme (Mid-Day Meal)",
+    "tamilName": "முதலமைச்சரின் சத்துணவு திட்டம்",
+    "category": "education",
+    "keywords": ["midday meal", "noon meal", "sathu unavu", "nutritious meal", "school lunch", "free food school", "mid day"],
+    "summary": "All students in government and government-aided schools receive free nutritious lunch on school days under this programme. The meal includes rice, sambar, vegetables, egg (3 times/week) and milk. Operated in 50,000+ schools benefiting 30 lakh students across Tamil Nadu."
+  },
+  {
+    "id": "sc_st_scholarship",
+    "name": "SC/ST Pre-Matric and Post-Matric Scholarships",
+    "tamilName": "தாழ்த்தப்பட்டோர் / பழங்குடியினர் தொடக்க, இடைநிலை மற்றும் உயர்கல்வி உதவித்தொகை",
+    "category": "education",
+    "keywords": ["sc scholarship", "st scholarship", "dalit scholarship", "scheduled caste", "scheduled tribe", "post matric", "pre matric", "sc st", "adi dravidar", "pazhangudiniar"],
+    "summary": "SC/ST students receive pre-matric scholarships (Class 1-10) and post-matric scholarships (Class 11 onwards including college) covering tuition fees, hostel charges, and monthly stipend. Apply online through the Tamil Nadu Adi Dravidar Welfare Department portal before the academic year deadline."
+  },
+  {
+    "id": "obc_scholarship",
+    "name": "OBC / MBC Post-Matric Scholarship",
+    "tamilName": "பிற்படுத்தப்பட்டோர் / மிகவும் பிற்படுத்தப்பட்டோர் உதவித்தொகை",
+    "category": "education",
+    "keywords": ["obc scholarship", "mbc scholarship", "backward class", "other backward", "pirrpaduthapattor", "most backward", "bcs scholarship"],
+    "summary": "OBC and MBC students studying Class 11 and above (including college and polytechnic) can apply for post-matric scholarships. Benefits include tuition fee reimbursement and monthly maintenance allowance. Apply through the Tamil Nadu BC/MBC Welfare Department portal with caste certificate and income certificate."
+  },
+  {
+    "id": "first_gen_graduate",
+    "name": "First Generation Graduate Scholarship",
+    "tamilName": "முதல் தலைமுறை பட்டதாரி உதவித்தொகை",
+    "category": "education",
+    "keywords": ["first generation", "first gen", "graduate", "mudhal thalaipurai", "first in family college", "first graduate"],
+    "summary": "Students who are the first in their family to pursue higher education (degree/diploma) receive the First Generation Graduate Scholarship. ₹1,500 per year for degree students, ₹1,125 for diploma students. Apply at the college with a declaration that no parent holds a degree."
+  },
+  {
+    "id": "free_laptop",
+    "name": "Free Laptop Scheme for Government School Students",
+    "tamilName": "இலவச மடிக்கணினி திட்டம்",
+    "category": "education",
+    "keywords": ["laptop", "free laptop", "computer", "madikkanini", "class 11", "government school laptop", "amma laptop"],
+    "summary": "Students who pass Class 10 from Tamil Nadu government schools and join Class 11 in government schools receive a free laptop. The scheme aims to bridge the digital divide. Laptops are distributed through the school at the start of Class 11."
+  },
+  {
+    "id": "minority_scholarship",
+    "name": "Minority Community Scholarship",
+    "tamilName": "சிறுபான்மையினர் கல்வி உதவித்தொகை",
+    "category": "education",
+    "keywords": ["minority", "muslim scholarship", "christian scholarship", "sikh", "minority scholarship", "religion scholarship", "sirupanmai"],
+    "summary": "Muslim, Christian, Sikh, Buddhist and Jain students whose family income is below ₹2 lakh/year can apply for the National Minority Development & Finance Corporation scholarship. Covers pre-matric and post-matric levels. Apply online through the Tamil Nadu Minority Welfare Department."
+  },
+  {
+    "id": "government_college_fee",
+    "name": "Free Education in Government Engineering and Arts Colleges",
+    "tamilName": "அரசு பொறியியல் மற்றும் கலை அறிவியல் கல்லூரிகளில் இலவச கல்வி",
+    "category": "education",
+    "keywords": ["government college fee", "free engineering", "anna university", "arts college", "fee waiver", "tuition fee free", "government polytechnic", "government college free"],
+    "summary": "Tamil Nadu government provides free education (full tuition fee waiver) for students from families earning below ₹2.5 lakh/year in all government arts, science, engineering and polytechnic colleges. Students from all communities are eligible. Apply through the college at time of admission with income certificate."
+  }
+]
