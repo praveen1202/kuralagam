@@ -7,23 +7,23 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.tamilvoice.config.GroqConfig;
 import com.tamilvoice.model.ChatRequest;
 import com.tamilvoice.model.ChatResponse;
+import com.tamilvoice.model.ConversationMessage;
 import com.tamilvoice.model.TranscriptionResult;
 import okhttp3.*;
+import okio.BufferedSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * GroqService handles all communication with the Groq API.
- *
- * Responsibilities:
- *  1. Build a structured JSON request payload
- *  2. Set the correct auth headers (Authorization: Bearer)
- *  3. Parse the JSON response and extract the text content
- *  4. Split the response into main reply + English translation
+ * Handles all communication with the Groq API — building requests (including
+ * conversation history and scheme grounding context), and parsing/streaming
+ * the response back.
  */
 @Service
 public class GroqService {
@@ -33,10 +33,19 @@ public class GroqService {
     private final GroqConfig config;
     private final OkHttpClient httpClient;
     private final ObjectMapper objectMapper;
+    private final ConversationService conversationService;
+    private final SchemeKnowledgeService schemeKnowledgeService;
+    private final DataCaptureService dataCaptureService;
 
-    public GroqService(GroqConfig config) {
+    public GroqService(GroqConfig config,
+                        ConversationService conversationService,
+                        SchemeKnowledgeService schemeKnowledgeService,
+                        DataCaptureService dataCaptureService) {
         this.config = config;
         this.objectMapper = new ObjectMapper();
+        this.conversationService = conversationService;
+        this.schemeKnowledgeService = schemeKnowledgeService;
+        this.dataCaptureService = dataCaptureService;
 
         // Build OkHttpClient with sensible timeouts
         this.httpClient = new OkHttpClient.Builder()
@@ -46,12 +55,9 @@ public class GroqService {
                 .build();
     }
 
-    /**
-     * Send a user message to Groq and return the assistant's response.
-     */
     public ChatResponse chat(ChatRequest chatRequest) {
         try {
-            String requestBody = buildRequestPayload(chatRequest);
+            String requestBody = buildRequestPayload(chatRequest, false);
             log.debug("Sending request to Groq API for language: {}", chatRequest.getLanguage());
 
             Request httpRequest = new Request.Builder()
@@ -72,7 +78,15 @@ public class GroqService {
                 }
 
                 log.info("Groq LLM Response received in {}ms. Raw Length: {}", duration, responseBody.length());
-                return parseResponse(responseBody);
+                String rawText = extractRawReply(responseBody);
+                if (rawText == null) {
+                    return ChatResponse.error("Empty response from Groq API.");
+                }
+
+                ChatResponse chatResponse = splitReply(rawText);
+                chatResponse.setConversationId(chatRequest.getConversationId());
+                conversationService.appendTurn(chatRequest.getConversationId(), chatRequest.getMessage(), rawText);
+                return chatResponse;
             }
 
         } catch (IOException e) {
@@ -81,6 +95,78 @@ public class GroqService {
         } catch (Exception e) {
             log.error("Unexpected error in GroqService", e);
             return ChatResponse.error("Unexpected error: " + e.getMessage());
+        }
+    }
+
+    // Runs blocking I/O — caller must invoke this from a background executor,
+    // never the Tomcat request thread.
+    public void chatStream(ChatRequest chatRequest, SseEmitter emitter) {
+        long startTime = System.currentTimeMillis();
+        StringBuilder fullReply = new StringBuilder();
+
+        try {
+            String requestBody = buildRequestPayload(chatRequest, true);
+
+            Request httpRequest = new Request.Builder()
+                    .url(config.getApiUrl())
+                    .post(RequestBody.create(requestBody, MediaType.get("application/json; charset=utf-8")))
+                    .header("Authorization", "Bearer " + config.getApiKey())
+                    .header("Content-Type", "application/json")
+                    .build();
+
+            try (Response response = httpClient.newCall(httpRequest).execute()) {
+                if (!response.isSuccessful() || response.body() == null) {
+                    String errBody = response.body() != null ? response.body().string() : "";
+                    log.error("Groq streaming API error {}: {}", response.code(), errBody);
+                    emitter.completeWithError(new IOException("API error " + response.code()));
+                    return;
+                }
+
+                BufferedSource source = response.body().source();
+                String line;
+                while ((line = source.readUtf8Line()) != null) {
+                    if (!line.startsWith("data: ")) continue;
+                    String data = line.substring(6).trim();
+                    if (data.equals("[DONE]")) break;
+                    if (data.isEmpty()) continue;
+
+                    JsonNode node = objectMapper.readTree(data);
+                    JsonNode deltaContent = node.path("choices").path(0).path("delta").path("content");
+                    if (!deltaContent.isMissingNode() && !deltaContent.isNull()) {
+                        String token = deltaContent.asText();
+                        fullReply.append(token);
+                        emitter.send(SseEmitter.event().data(token));
+                    }
+                }
+            }
+
+            long duration = System.currentTimeMillis() - startTime;
+            String rawText = fullReply.toString();
+
+            if (!rawText.isBlank()) {
+                conversationService.appendTurn(chatRequest.getConversationId(), chatRequest.getMessage(), rawText);
+                ChatResponse parsed = splitReply(rawText);
+                String inputType = chatRequest.getSttDurationMs() > 0 ? "voice" : "text";
+                dataCaptureService.capture(
+                        chatRequest.getLanguage(),
+                        chatRequest.getMessage(),
+                        chatRequest.getSttDurationMs(),
+                        parsed.getReply(),
+                        parsed.getTranslation(),
+                        duration,
+                        inputType,
+                        chatRequest.getConversationId()
+                );
+            }
+
+            emitter.complete();
+
+        } catch (IOException e) {
+            log.error("Network error during Groq streaming", e);
+            emitter.completeWithError(e);
+        } catch (Exception e) {
+            log.error("Unexpected error during Groq streaming", e);
+            emitter.completeWithError(e);
         }
     }
 
@@ -133,20 +219,47 @@ public class GroqService {
         }
     }
 
-    /**
-     * Build the JSON payload for the Groq completions endpoint.
-     */
-    private String buildRequestPayload(ChatRequest req) throws Exception {
+    private String buildRequestPayload(ChatRequest req, boolean stream) throws Exception {
         ObjectNode payload = objectMapper.createObjectNode();
         payload.put("model", config.getModel());
         payload.put("max_tokens", config.getMaxTokens());
+        if (stream) {
+            payload.put("stream", true);
+        }
 
         ArrayNode messages = objectMapper.createArrayNode();
-        
+
+        String systemPrompt = buildSystemPrompt(req);
+
+        // RAG-lite retrieval. A low score means the knowledge base has nothing
+        // confident for this question — log it so the gap feeds the review queue
+        // that drives what we add to schemes.json next.
+        SchemeKnowledgeService.MatchResult match = schemeKnowledgeService.findRelevant(req.getMessage());
+        if (!match.context().isBlank()) {
+            systemPrompt = systemPrompt + "\n" + match.context();
+        }
+        if (match.isGap()) {
+            dataCaptureService.captureKnowledgeGap(
+                    req.getLanguage(),
+                    req.getMessage(),
+                    match.topScore(),
+                    match.matchedIds(),
+                    req.getConversationId()
+            );
+        }
+
         ObjectNode systemMsg = objectMapper.createObjectNode();
         systemMsg.put("role", "system");
-        systemMsg.put("content", buildSystemPrompt(req));
+        systemMsg.put("content", systemPrompt);
         messages.add(systemMsg);
+
+        List<ConversationMessage> history = conversationService.getHistory(req.getConversationId());
+        for (ConversationMessage m : history) {
+            ObjectNode historyMsg = objectMapper.createObjectNode();
+            historyMsg.put("role", m.getRole());
+            historyMsg.put("content", m.getContent());
+            messages.add(historyMsg);
+        }
 
         ObjectNode userMsg = objectMapper.createObjectNode();
         userMsg.put("role", "user");
@@ -160,22 +273,22 @@ public class GroqService {
     /**
      * Build the domain-restricted system prompt for the TN Health & Education assistant.
      *
-     * Domain scope (Phase 1 baseline — no RAG yet, LLM knowledge only):
+     * Domain scope:
      *   - Tamil Nadu government Health schemes (CMCHIS, Dr. Kalaignar Insurance,
      *     free medicines, government hospital services, maternal health programmes, etc.)
      *   - Tamil Nadu government Education schemes (scholarships, free uniforms,
      *     mid-day meals, Pudhumai Penn, government college admissions, etc.)
      *
      * Out-of-domain questions receive a polite decline in the target language.
-     * This guardrail is intentionally strict so our Phase 1 evaluation data reflects
-     * only relevant interactions, making quality measurement meaningful.
+     * This guardrail is intentionally strict so evaluation data reflects only
+     * relevant interactions, making quality measurement meaningful.
      */
     private String buildSystemPrompt(ChatRequest req) {
         return String.format("""
             You are "Kuralargam" (குரலகம்), a voice assistant that helps people in Tamil Nadu
             understand government Health and Education schemes in %s.
 
-            The user communicates via voice — their speech has been converted to text.
+            The user is chatting with you in text or voice — either way, their input arrives as text.
 
             YOUR DOMAIN — answer ONLY questions about:
             1. Tamil Nadu government HEALTH schemes:
@@ -208,19 +321,19 @@ public class GroqService {
         );
     }
 
-    /**
-     * Parse the Groq API JSON response and extract text content.
-     * Splits into main reply and optional English translation.
-     */
-    private ChatResponse parseResponse(String responseBody) throws Exception {
+    private String extractRawReply(String responseBody) throws Exception {
         JsonNode root = objectMapper.readTree(responseBody);
         JsonNode choices = root.path("choices");
 
         if (choices.isEmpty()) {
-            return ChatResponse.error("Empty response from Groq API.");
+            return null;
         }
 
-        String text = choices.get(0).path("message").path("content").asText().trim();
+        return choices.get(0).path("message").path("content").asText().trim();
+    }
+
+    // Splits per the system prompt's "native line, then (translation) line" contract.
+    private ChatResponse splitReply(String text) {
         String[] lines = text.split("\\n");
 
         String mainReply = lines[0].trim();

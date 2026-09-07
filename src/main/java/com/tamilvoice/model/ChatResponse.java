@@ -9,6 +9,7 @@ public class ChatResponse {
     private String reply;        // Main response (in the target language)
     private String translation;  // English translation in parentheses (optional)
     private String error;        // Error message if success=false
+    private String conversationId;
 
     // Static factory methods for clean construction
     public static ChatResponse ok(String reply, String translation) {
@@ -37,4 +38,7 @@ public class ChatResponse {
 
     public String getError() { return error; }
     public void setError(String error) { this.error = error; }
+
+    public String getConversationId() { return conversationId; }
+    public void setConversationId(String conversationId) { this.conversationId = conversationId; }
 }

@@ -455,6 +455,13 @@
     let isRecording     = false;
     let lastBotText     = '';
 
+    // Per-tab: survives refresh, resets in a new tab.
+    let conversationId = sessionStorage.getItem('kuralagam_conversationId');
+    if (!conversationId) {
+        conversationId = crypto.randomUUID();
+        sessionStorage.setItem('kuralagam_conversationId', conversationId);
+    }
+
     // ── Language switching ────────────────────────
     function setLang(code, name) {
         currentLang     = code;
@@ -503,6 +510,50 @@
         msg.appendChild(bubble);
         chat.appendChild(msg);
         chat.scrollTop = chat.scrollHeight;
+    }
+
+    function addStreamingBotMessage() {
+        const chat = document.getElementById('chat');
+        const msg  = document.createElement('div');
+        msg.className = 'msg bot';
+
+        const label  = document.createElement('span');
+        label.className = 'msg-label';
+        label.textContent = 'குரலகம் (Assistant)';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'msg-bubble';
+
+        msg.appendChild(label);
+        msg.appendChild(bubble);
+        chat.appendChild(msg);
+        chat.scrollTop = chat.scrollHeight;
+        return bubble;
+    }
+
+    // Mirrors GroqService.splitReply — first line is the reply, a later
+    // parenthesized line is the translation.
+    function finalizeBotMessage(bubble, rawText) {
+        const lines = rawText.split('\n');
+        const mainReply = (lines[0] || '').trim();
+        let translation = null;
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line.startsWith('(') && line.endsWith(')')) {
+                translation = line;
+                break;
+            }
+        }
+
+        bubble.textContent = mainReply;
+        if (translation) {
+            const tr = document.createElement('span');
+            tr.className = 'msg-tamil';
+            tr.textContent = translation;
+            bubble.appendChild(tr);
+        }
+
+        lastBotText = mainReply;
     }
 
     // ── Microphone / STT (Groq Whisper) ──────────
@@ -605,7 +656,7 @@
         document.getElementById('sendBtn').disabled = true;
     }
 
-    // ── Send to Groq (LLM Chat) ──────────────────
+    // ── Send to Groq (LLM Chat, streamed over SSE) ────────────────
     async function sendMessage() {
         const inp = document.getElementById('transcriptInput');
         const textToSend = inp.value.trim();
@@ -618,28 +669,54 @@
         document.getElementById('thinking').classList.add('show');
         document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
 
+        let botBubble = null;
+        let rawText   = '';
+
         try {
-            const res = await fetch('/api/chat', {
+            const res = await fetch('/api/chat/stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    message:      textToSend,
-                    language:     currentLang,
-                    languageName: currentLangName
+                    message:        textToSend,
+                    language:       currentLang,
+                    languageName:   currentLangName,
+                    conversationId: conversationId
                 })
             });
 
             document.getElementById('thinking').classList.remove('show');
-            const data = await res.json();
 
-            if (!res.ok || !data.success) {
+            if (!res.ok || !res.body) {
                 setStatus('Error from server', 'err');
-                showError(data.error || 'Unknown server error.');
+                showError('Server error while generating a response.');
                 return;
             }
 
-            lastBotText = data.reply;
-            addMessage('bot', data.reply, data.translation);
+            botBubble = addStreamingBotMessage();
+
+            const reader  = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                let frameEnd;
+                while ((frameEnd = buffer.indexOf('\n\n')) !== -1) {
+                    const frame = buffer.slice(0, frameEnd);
+                    buffer = buffer.slice(frameEnd + 2);
+                    const dataLine = frame.split('\n').find(l => l.startsWith('data:'));
+                    if (dataLine) {
+                        rawText += dataLine.slice(5).replace(/^ /, '');
+                        botBubble.textContent = rawText;
+                        document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+                    }
+                }
+            }
+
+            finalizeBotMessage(botBubble, rawText);
             document.getElementById('speakBtn').disabled = false;
             setStatus('Ready', 'ok');
 
@@ -647,6 +724,7 @@
             document.getElementById('thinking').classList.remove('show');
             setStatus('Network error', 'err');
             showError('Could not reach the server: ' + err.message);
+            if (botBubble && !rawText) botBubble.closest('.msg').remove();
         }
     }
 

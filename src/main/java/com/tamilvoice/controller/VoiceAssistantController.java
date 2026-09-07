@@ -8,22 +8,15 @@ import com.tamilvoice.service.GroqService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Map;
+import java.util.concurrent.Executor;
 
-/**
- * VoiceAssistantController
- *
- * Routes:
- * GET  /              → Serves the main HTML page (Thymeleaf template)
- * POST /api/transcribe → Receives audio blob, returns { text, sttDurationMs }
- * POST /api/chat      → Accepts ChatRequest, returns ChatResponse; writes to DataCaptureService
- * POST /api/telemetry → Logs frontend events (TTS, errors, etc.)
- * GET  /health        → Simple health check
- */
 @Controller
 public class VoiceAssistantController {
 
@@ -31,10 +24,13 @@ public class VoiceAssistantController {
 
     private final GroqService groqService;
     private final DataCaptureService dataCaptureService;
+    private final Executor chatStreamExecutor;
 
-    public VoiceAssistantController(GroqService groqService, DataCaptureService dataCaptureService) {
+    public VoiceAssistantController(GroqService groqService, DataCaptureService dataCaptureService,
+                                     Executor chatStreamExecutor) {
         this.groqService = groqService;
         this.dataCaptureService = dataCaptureService;
+        this.chatStreamExecutor = chatStreamExecutor;
     }
 
     /** Serve the main web app page */
@@ -77,14 +73,7 @@ public class VoiceAssistantController {
         }
     }
 
-    /**
-     * Main chat endpoint.
-     * Accepts: { message, language, languageName, sttDurationMs }
-     * Returns: { success, reply, translation }
-     *
-     * Writes a complete interaction record to DataCaptureService after each
-     * successful LLM response (STT + LLM latencies + transcription + reply).
-     */
+    /** Non-streaming chat endpoint. */
     @PostMapping("/api/chat")
     @ResponseBody
     public ResponseEntity<ChatResponse> chat(@Valid @RequestBody ChatRequest request) {
@@ -106,7 +95,8 @@ public class VoiceAssistantController {
                     response.getReply(),
                     response.getTranslation(),
                     llmDurationMs,
-                    inputType
+                    inputType,
+                    request.getConversationId()
             );
             log.info("LLM complete in {}ms (total voice latency: {}ms)",
                     llmDurationMs,
@@ -115,6 +105,18 @@ public class VoiceAssistantController {
         } else {
             return ResponseEntity.internalServerError().body(response);
         }
+    }
+
+    /** Same request shape as /api/chat, but streams the reply as SSE text deltas. */
+    @PostMapping(value = "/api/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @ResponseBody
+    public SseEmitter chatStream(@Valid @RequestBody ChatRequest request) {
+        log.info("Streaming chat request — lang: {}, msgLen: {}",
+                request.getLanguage(), request.getMessage().length());
+
+        SseEmitter emitter = new SseEmitter(60_000L);
+        chatStreamExecutor.execute(() -> groqService.chatStream(request, emitter));
+        return emitter;
     }
 
     /** Telemetry endpoint — logs frontend events (TTS start/end/error, voice missing, etc.) */

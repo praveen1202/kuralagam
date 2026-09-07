@@ -20,6 +20,9 @@ public class ChatRequest {
     // 0 means the user typed the message manually.
     private long sttDurationMs = 0;
 
+    // Blank/null means don't persist history (single-turn request).
+    private String conversationId;
+
     public ChatRequest() {}
 
     public ChatRequest(String message, String language, String languageName) {
@@ -39,4 +42,7 @@ public class ChatRequest {
 
     public long getSttDurationMs() { return sttDurationMs; }
     public void setSttDurationMs(long sttDurationMs) { this.sttDurationMs = sttDurationMs; }
+
+    public String getConversationId() { return conversationId; }
+    public void setConversationId(String conversationId) { this.conversationId = conversationId; }
 }

@@ -35,6 +35,12 @@
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
         </dependency>
 
+        <!-- Redis (persistent conversation history) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
         <!-- HTTP Client for Anthropic API calls -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>

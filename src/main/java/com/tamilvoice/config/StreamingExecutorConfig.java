@@ -6,11 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-/**
- * Dedicated bounded thread pool for the blocking Groq SSE read loop, so
- * streaming chat responses don't tie up Tomcat's request-handling threads
- * for the duration of the stream.
- */
+// Keeps the blocking Groq SSE read loop off Tomcat's request threads.
 @Configuration
 public class StreamingExecutorConfig {
 
