@@ -1,0 +1,141 @@
+{
+  "region": "tamil-nadu",
+  "regionCode": "TN",
+  "languages": ["ta", "en"],
+  "lastReviewed": "2026-09-07",
+  "_comment": [
+    "Authoritative crawl targets for the daily scheme-refresh job.",
+    "Only *.gov.in / *.tn.gov.in and official scheme portals belong here — never news sites,",
+    "coaching portals or aggregator blogs. Those are useful for discovering that a scheme exists,",
+    "but figures must be confirmed against a source in this file before landing in schemes.json.",
+    "IMPORTANT FINDING (2026-09-07): the central tn.gov.in scheme directory only indexes 11",
+    "departments and does NOT include Health & Family Welfare, School Education or Higher",
+    "Education. Our two domains must therefore be crawled from the department portals below.",
+    "When adding another state or language, create a sibling file (e.g. scheme-sources-kl.json)",
+    "rather than merging — different portals, different refresh cadence, different source of truth."
+  ],
+
+  "sources": [
+    {
+      "id": "tn_scheme_directory_az",
+      "name": "Tamil Nadu Government Portal — A–Z scheme directory",
+      "url": "https://www.tn.gov.in/scheme_wise.php",
+      "detailUrlPattern": "https://www.tn.gov.in/scheme_details.php?id={base64Id}",
+      "categories": ["education"],
+      "renderMode": "server",
+      "crawlable": true,
+      "priority": 1,
+      "notes": "~180 schemes, alphabet-filtered, no pagination. Detail ids are base64-encoded integers. Covers the welfare-department education scholarships (SC/ST, BC/MBC, minority) but NOT the Health or School Education departments."
+    },
+    {
+      "id": "tn_scheme_dept_social_justice",
+      "name": "Adi Dravidar & Tribal Welfare / Social Justice — scheme list",
+      "url": "https://www.tn.gov.in/scheme_list.php?dep_id=MQ==",
+      "categories": ["education"],
+      "renderMode": "server",
+      "crawlable": true,
+      "priority": 2,
+      "notes": "Source of truth for SC/ST pre-matric and post-matric scholarships, free education up to Class 12, exam-fee assistance, hostels, book bank."
+    },
+    {
+      "id": "tn_scheme_dept_bc_mbc_minorities",
+      "name": "BC, MBC & Minorities Welfare — scheme list",
+      "url": "https://www.tn.gov.in/scheme_list.php?dep_id=NA==",
+      "categories": ["education"],
+      "renderMode": "server",
+      "crawlable": true,
+      "priority": 2,
+      "notes": "Source of truth for OBC/MBC and minority pre-matric, post-matric and professional-course scholarships."
+    },
+    {
+      "id": "tn_health_department",
+      "name": "Health & Family Welfare Department, Government of Tamil Nadu",
+      "url": "https://tnhealth.tn.gov.in/",
+      "categories": ["health"],
+      "renderMode": "server",
+      "crawlable": true,
+      "priority": 1,
+      "notes": "Departmental hub. Links out to the directorates (DPH, DMS, DME, TNMSC, TNHSP). Landing page itself lists directorates rather than schemes — crawl the directorate pages it links to."
+    },
+    {
+      "id": "tn_nhm_programs",
+      "name": "National Health Mission Tamil Nadu — programmes",
+      "url": "https://www.nhm.tn.gov.in/en/nhm-programs",
+      "categories": ["health"],
+      "renderMode": "server",
+      "crawlable": true,
+      "priority": 1,
+      "notes": "Richest single health page: RMNCH+A, TAEI, communicable & non-communicable disease programmes, dialysis, cancer screening, mental health. Well structured and reliably server-rendered."
+    },
+    {
+      "id": "tn_social_welfare",
+      "name": "Social Welfare & Women Empowerment Department",
+      "url": "https://www.tnsocialwelfare.tn.gov.in/en",
+      "categories": ["health", "education"],
+      "renderMode": "server",
+      "crawlable": true,
+      "priority": 1,
+      "notes": "Source of truth for the Nutritious Meal Programme, Chief Minister's Breakfast Scheme, Pudhumai Penn, Cradle Baby Scheme and maternity benefits. Publishes exact beneficiary counts and per-meal nutrition figures."
+    },
+    {
+      "id": "tn_pudhumai_penn",
+      "name": "Moovalur Ramamirtham Ammaiyar Higher Education Assurance Scheme (Pudhumai Penn) portal",
+      "url": "https://www.pudhumaipenn.tn.gov.in/",
+      "categories": ["education"],
+      "renderMode": "server",
+      "crawlable": true,
+      "priority": 2,
+      "notes": "Official scheme portal. Also the application entry point students should be pointed to."
+    },
+    {
+      "id": "tn_collegiate_education",
+      "name": "Directorate of Collegiate Education",
+      "url": "https://tndce.tn.gov.in/",
+      "categories": ["education"],
+      "renderMode": "server",
+      "crawlable": true,
+      "priority": 3,
+      "notes": "Scholarship announcements are published as linked PDFs rather than HTML pages — the refresh job needs a PDF text extraction step for this source."
+    },
+    {
+      "id": "tn_cmchis",
+      "name": "Chief Minister's Comprehensive Health Insurance Scheme — official portal",
+      "url": "https://www.cmchistn.com/",
+      "categories": ["health"],
+      "renderMode": "javascript",
+      "crawlable": false,
+      "priority": 1,
+      "notes": "AUTHORITATIVE for CMCHIS coverage/procedure/hospital figures, but the page is JavaScript-rendered and returns almost no content to a plain HTTP fetch. Needs a headless browser, or flag CMCHIS for manual verification. Secondary sources disagree badly on the procedure count (1,016 vs 1,416 vs 2,053) — do not trust them."
+    },
+    {
+      "id": "tn_health_systems_project",
+      "name": "Tamil Nadu Health Systems Project (TNHSP)",
+      "url": "https://www.tnhsp.org/",
+      "categories": ["health"],
+      "renderMode": "server",
+      "crawlable": true,
+      "priority": 3,
+      "notes": "Implementing agency for CMCHIS and Innuyir Kaappom. Useful cross-check when cmchistn.com cannot be scraped."
+    },
+    {
+      "id": "national_scholarship_portal",
+      "name": "National Scholarship Portal",
+      "url": "https://scholarships.gov.in/",
+      "categories": ["education"],
+      "renderMode": "javascript",
+      "crawlable": false,
+      "priority": 4,
+      "notes": "Central-government scholarships TN students are also eligible for (minority pre/post-matric). JS-rendered; low priority since state schemes dominate our traffic."
+    },
+    {
+      "id": "myscheme",
+      "name": "myScheme — National scheme discovery portal",
+      "url": "https://www.myscheme.gov.in/search/state/Tamil%20Nadu",
+      "categories": ["health", "education"],
+      "renderMode": "javascript",
+      "crawlable": false,
+      "priority": 4,
+      "notes": "Government-run and genuinely comprehensive, but the listing is a client-rendered Next.js app with no documented public API — a plain fetch returns the shell only. Best used as a manual completeness audit target, not an automated crawl target."
+    }
+  ]
+}
