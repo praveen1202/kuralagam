@@ -30,6 +30,13 @@ public class GroqService {
 
     private static final Logger log = LoggerFactory.getLogger(GroqService.class);
 
+    /**
+     * Prefix the model puts on line 1 when it declines an out-of-domain question.
+     * Stripped before the text is shown, stored in history, or captured — it only
+     * tells the UI to render the reply as a scope decline.
+     */
+    static final String OFF_TOPIC_MARKER = "[OFF_TOPIC]";
+
     private final GroqConfig config;
     private final OkHttpClient httpClient;
     private final ObjectMapper objectMapper;
@@ -57,7 +64,8 @@ public class GroqService {
 
     public ChatResponse chat(ChatRequest chatRequest) {
         try {
-            String requestBody = buildRequestPayload(chatRequest, false);
+            PreparedRequest prepared = buildRequestPayload(chatRequest, false);
+            String requestBody = prepared.payload();
             log.debug("Sending request to Groq API for language: {}", chatRequest.getLanguage());
 
             Request httpRequest = new Request.Builder()
@@ -85,7 +93,8 @@ public class GroqService {
 
                 ChatResponse chatResponse = splitReply(rawText);
                 chatResponse.setConversationId(chatRequest.getConversationId());
-                conversationService.appendTurn(chatRequest.getConversationId(), chatRequest.getMessage(), rawText);
+                conversationService.appendTurn(chatRequest.getConversationId(), chatRequest.getMessage(),
+                        stripMarker(rawText));
                 return chatResponse;
             }
 
@@ -105,7 +114,15 @@ public class GroqService {
         StringBuilder fullReply = new StringBuilder();
 
         try {
-            String requestBody = buildRequestPayload(chatRequest, true);
+            PreparedRequest prepared = buildRequestPayload(chatRequest, true);
+            String requestBody = prepared.payload();
+
+            // Source pills are known before the first token — send them up front so the
+            // UI can attach them to the bubble the moment the answer finishes.
+            emitter.send(SseEmitter.event().name("meta").data(
+                    objectMapper.writeValueAsString(
+                            objectMapper.createObjectNode()
+                                    .set("sources", objectMapper.valueToTree(prepared.match().sources())))));
 
             Request httpRequest = new Request.Builder()
                     .url(config.getApiUrl())
@@ -135,7 +152,7 @@ public class GroqService {
                     if (!deltaContent.isMissingNode() && !deltaContent.isNull()) {
                         String token = deltaContent.asText();
                         fullReply.append(token);
-                        emitter.send(SseEmitter.event().data(token));
+                        emitter.send(SseEmitter.event().name("token").data(token));
                     }
                 }
             }
@@ -144,8 +161,9 @@ public class GroqService {
             String rawText = fullReply.toString();
 
             if (!rawText.isBlank()) {
-                conversationService.appendTurn(chatRequest.getConversationId(), chatRequest.getMessage(), rawText);
                 ChatResponse parsed = splitReply(rawText);
+                conversationService.appendTurn(chatRequest.getConversationId(), chatRequest.getMessage(),
+                        stripMarker(rawText));
                 String inputType = chatRequest.getSttDurationMs() > 0 ? "voice" : "text";
                 dataCaptureService.capture(
                         chatRequest.getLanguage(),
@@ -219,7 +237,10 @@ public class GroqService {
         }
     }
 
-    private String buildRequestPayload(ChatRequest req, boolean stream) throws Exception {
+    /** A built Groq request together with the knowledge-base match that grounded it. */
+    private record PreparedRequest(String payload, SchemeKnowledgeService.MatchResult match) {}
+
+    private PreparedRequest buildRequestPayload(ChatRequest req, boolean stream) throws Exception {
         ObjectNode payload = objectMapper.createObjectNode();
         payload.put("model", config.getModel());
         payload.put("max_tokens", config.getMaxTokens());
@@ -267,7 +288,7 @@ public class GroqService {
         messages.add(userMsg);
 
         payload.set("messages", messages);
-        return objectMapper.writeValueAsString(payload);
+        return new PreparedRequest(objectMapper.writeValueAsString(payload), match);
     }
 
     /**
@@ -284,9 +305,12 @@ public class GroqService {
      * relevant interactions, making quality measurement meaningful.
      */
     private String buildSystemPrompt(ChatRequest req) {
+        String replyLanguage = replyLanguageOf(req);
+        String glossLanguage = glossLanguageFor(replyLanguage);
+
         return String.format("""
-            You are "Kuralargam" (குரலகம்), a voice assistant that helps people in Tamil Nadu
-            understand government Health and Education schemes in %s.
+            You are "Kuralagam" (குரலகம்), an assistant that helps people in Tamil Nadu
+            understand government Health and Education schemes.
 
             The user is chatting with you in text or voice — either way, their input arrives as text.
 
@@ -301,24 +325,54 @@ public class GroqService {
                concessions, Amma Unavagam, library and digital access programmes.
 
             STRICT RESPONSE FORMAT:
-            Line 1: Your response written entirely in %s native script.
-            Line 2: English translation in parentheses, e.g. (This scheme provides free medicine.)
+            Line 1: Your answer written entirely in %s.
+            Line 2: A %s rendering of line 1, wrapped in parentheses.
+                    The reader may never open line 2 — so line 1 must stand on its own,
+                    and line 2 must carry the same facts, not a summary of them.
 
             RULES:
-            - Keep responses SHORT — 2 to 3 sentences maximum. This is a voice interface.
+            - Answer in the SAME language the user wrote in. The user wrote in %s, so line 1
+              is in %s — regardless of what language earlier turns used.
+            - Keep responses SHORT — 2 to 3 sentences maximum.
             - Be warm, respectful, and use simple language accessible to rural users.
             - Always name the specific scheme when relevant.
-            - If the question is outside TN Health or Education schemes, politely decline in %s
-              and explain you can only help with TN government health and education schemes.
-              Do NOT answer general knowledge, politics, entertainment, or other topics.
+            - If the question is outside TN Health or Education schemes, begin your reply with
+              the marker %s followed by a space, then politely decline in %s and explain you
+              can only help with TN government health and education schemes. Do NOT answer
+              general knowledge, politics, entertainment, or other topics. The marker goes on
+              line 1 only — never on line 2.
             - NEVER add extra lines, disclaimers, or preambles — just the two lines above.
-            - If the user speaks in English, still respond in %s script first, then translate.
             """,
-            req.getLanguageName(),
-            req.getLanguageName(),
-            req.getLanguageName(),
-            req.getLanguageName()
+            replyLanguage,
+            glossLanguage,
+            replyLanguage,
+            replyLanguage,
+            OFF_TOPIC_MARKER,
+            replyLanguage
         );
+    }
+
+    /**
+     * The language the answer itself is written in. The frontend detects the script the
+     * user actually typed and sends it as languageName, so the assistant mirrors the
+     * user's language rather than the interface setting.
+     */
+    private String replyLanguageOf(ChatRequest req) {
+        String name = req.getLanguageName();
+        return (name == null || name.isBlank()) ? "Tamil" : name.trim();
+    }
+
+    /** The parenthesised second line is always the other side of the pair. */
+    private String glossLanguageFor(String replyLanguage) {
+        return replyLanguage.equalsIgnoreCase("English") ? "Tamil" : "English";
+    }
+
+    /** Removes the scope marker so it never reaches history, capture, or the reader. */
+    private static String stripMarker(String rawText) {
+        String trimmed = rawText.stripLeading();
+        return trimmed.startsWith(OFF_TOPIC_MARKER)
+                ? trimmed.substring(OFF_TOPIC_MARKER.length()).stripLeading()
+                : rawText;
     }
 
     private String extractRawReply(String responseBody) throws Exception {
@@ -348,7 +402,10 @@ public class GroqService {
             }
         }
 
-        log.debug("Groq response parsed — main: {}, translation: {}", mainReply, translation);
-        return ChatResponse.ok(mainReply, translation);
+        log.debug("Groq response parsed — main: {}, translation: {}, outOfScope: {}",
+                mainReply, translation, outOfScope);
+        ChatResponse parsed = ChatResponse.ok(mainReply, translation);
+        parsed.setOutOfScope(outOfScope);
+        return parsed;
     }
 }

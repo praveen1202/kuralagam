@@ -11,6 +11,11 @@ public class ChatResponse {
     private String error;        // Error message if success=false
     private String conversationId;
 
+    // True when the model declined because the question fell outside the
+    // TN Health/Education domain. The UI renders these declines differently
+    // from ordinary answers.
+    private boolean outOfScope;
+
     // Static factory methods for clean construction
     public static ChatResponse ok(String reply, String translation) {
         ChatResponse r = new ChatResponse();
@@ -41,4 +46,7 @@ public class ChatResponse {
 
     public String getConversationId() { return conversationId; }
     public void setConversationId(String conversationId) { this.conversationId = conversationId; }
+
+    public boolean isOutOfScope() { return outOfScope; }
+    public void setOutOfScope(boolean outOfScope) { this.outOfScope = outOfScope; }
 }

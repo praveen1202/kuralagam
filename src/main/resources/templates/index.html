@@ -3,769 +3,1262 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>குரலகம் — Tamil Voice Assistant</title>
+    <title>குரலகம் — Kuralagam</title>
 
-    <!-- Tamil + English fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Tamil:wght@400;600&family=DM+Serif+Display&family=Inter:wght@300;400;500&display=swap">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Noto+Serif+Tamil:wght@400;500;600;700&family=Noto+Serif:wght@400;600&family=Inter:wght@400;500;600&display=swap">
 
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --saffron:       #C8651B;
-            --saffron-light: #F5DEC8;
-            --saffron-dark:  #8A4210;
-            --jade:          #2D7A5E;
-            --jade-light:    #D0EDE4;
-            --maroon:        #7B1D2D;
-            --maroon-light:  #F2DCE0;
-            --cream:         #FBF7F0;
-            --cream-dark:    #F0E8D8;
-            --ink:           #1C1410;
-            --ink-muted:     #5C4A3A;
-            --border:        rgba(200, 101, 27, 0.22);
+            /* Palette lifted from the Kuralagam Screens design doc. */
+            --ground:      #FBF7F0;
+            --chrome:      #F6EFE2;
+            --footer:      #EDE3CE;
+            --surface:     #FFFCF6;
+            --field:       #F1E7D4;
+            --field-idle:  #E4D7BE;
+            --chip:        #F0E8D8;
+            --ink:         #1C1410;
+            --ink-2:       #6B584C;
+            --maroon:      #7B1D2D;
+            --saffron:     #C8651B;
+            --saffron-ink: #8A4413;
+            --jade:        #2D7A5E;
+            --rule:        rgba(123, 29, 45, 0.14);
+            --rule-soft:   rgba(123, 29, 45, 0.13);
+            --tamil:       'Noto Serif Tamil', 'Noto Serif', serif;
+            --mono:        ui-monospace, Menlo, Consolas, monospace;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background: var(--cream-dark);
-            min-height: 100vh;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #EDE6DA;
+            color: var(--ink);
+            min-height: 100dvh;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 24px 16px;
         }
 
-        /* Subtle background pattern */
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background-image: repeating-linear-gradient(
-                45deg,
-                rgba(200,101,27,0.04) 0,
-                rgba(200,101,27,0.04) 1px,
-                transparent 0,
-                transparent 50%
-            );
-            background-size: 18px 18px;
-            pointer-events: none;
-        }
-
+        /* ── Shell ────────────────────────────────────────────── */
         .app {
-            background: var(--cream);
-            border: 0.5px solid var(--border);
-            border-radius: 20px;
             width: 100%;
-            max-width: 680px;
-            overflow: hidden;
-            box-shadow: 0 8px 40px rgba(139, 66, 16, 0.12);
-            position: relative;
-            z-index: 1;
-        }
-
-        /* ── Header ─────────────────────────────── */
-        .header {
-            background: var(--saffron);
-            padding: 22px 28px 18px;
-            position: relative;
-            overflow: hidden;
-        }
-        .header::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 0, transparent 50%);
-            background-size: 10px 10px;
-        }
-        .header-title {
-            font-family: 'DM Serif Display', serif;
-            font-size: 24px;
-            color: #fff;
-            position: relative;
-            z-index: 1;
-        }
-        .header-sub {
-            font-family: 'Noto Serif Tamil', serif;
-            font-size: 14px;
-            color: rgba(255,255,255,0.82);
-            margin-top: 4px;
-            position: relative;
-            z-index: 1;
-        }
-        .header-dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            background: #4ade80;
-            display: inline-block;
-            margin-right: 6px;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-
-        /* ── Language selector ───────────────────── */
-        .lang-bar {
-            display: flex;
-            gap: 8px;
-            padding: 12px 28px;
-            border-bottom: 0.5px solid var(--border);
-            background: #fff;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .lang-label { font-size: 12px; color: var(--ink-muted); }
-        .lang-chip {
-            font-size: 12px;
-            padding: 5px 12px;
-            border-radius: 20px;
-            border: 0.5px solid var(--border);
-            background: transparent;
-            color: var(--ink-muted);
-            cursor: pointer;
-            transition: all 0.15s;
-            font-family: inherit;
-        }
-        .lang-chip:hover { background: var(--saffron-light); }
-        .lang-chip.active {
-            background: var(--saffron-light);
-            color: var(--saffron-dark);
-            border-color: var(--saffron);
-            font-weight: 500;
-        }
-
-        /* ── Chat messages ───────────────────────── */
-        .chat-area {
-            min-height: 300px;
-            max-height: 360px;
-            overflow-y: auto;
-            padding: 22px 28px;
+            max-width: 520px;
+            height: 100dvh;
+            max-height: 860px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
-            background: var(--cream);
+            background: var(--ground);
+            background-image: repeating-linear-gradient(135deg,
+                rgba(200,101,27,.055) 0 1px, rgba(0,0,0,0) 1px 10px);
+            overflow: hidden;
+        }
+        @media (min-width: 560px) and (min-height: 880px) {
+            .app { border-radius: 24px; box-shadow: 0 18px 60px -30px rgba(28,20,16,.45); }
+        }
+
+        /* ── Header ───────────────────────────────────────────── */
+        .hdr {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 16px 20px 14px;
+            background: var(--chrome);
+            border-bottom: 1px solid var(--rule);
+            flex: none;
+        }
+        .seal {
+            width: 38px; height: 38px;
+            border-radius: 12px;
+            background: var(--maroon);
+            color: var(--ground);
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--tamil);
+            font-size: 19px; font-weight: 600;
+            flex: none;
+        }
+        .hdr-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+        .brand {
+            font-family: var(--tamil);
+            font-size: 20px; font-weight: 600; line-height: 1;
+            letter-spacing: .01em;
+        }
+        .presence {
+            display: flex; align-items: center; gap: 6px;
+            white-space: nowrap;
+            font-size: 11.5px;
+            color: rgba(28,20,16,.6);
+        }
+        .lang-ta .presence { font-family: var(--tamil); }
+        .presence-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--jade);
+            box-shadow: 0 0 0 3px rgba(45,122,94,.18);
+            flex: none;
+        }
+        .app.offline .presence { color: rgba(123,29,45,.85); }
+        .app.offline .presence-dot {
+            background: var(--saffron);
+            box-shadow: 0 0 0 3px rgba(200,101,27,.18);
+        }
+
+        /* Language control */
+        .lang-wrap { margin-left: auto; position: relative; flex: none; }
+        .lang-btn {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 13px;
+            border-radius: 12px;
+            background: var(--chip);
+            border: 1px solid rgba(200,101,27,.4);
+            color: var(--saffron-ink);
+            font: inherit;
+            font-size: 14px;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .lang-ta .lang-btn { font-family: var(--tamil); }
+        .lang-btn[aria-expanded="true"] { border-color: var(--saffron); }
+        .lang-btn .globe {
+            width: 14px; height: 14px; border-radius: 50%;
+            border: 1.5px solid var(--saffron);
+            flex: none;
+        }
+        .lang-btn .caret { font-size: 10px; }
+        .lang-btn[aria-expanded="true"] .caret { transform: rotate(180deg); }
+
+        .lang-menu {
+            position: absolute;
+            right: 0; top: calc(100% + 8px);
+            width: 236px;
+            background: var(--surface);
+            border: 1px solid rgba(123,29,45,.16);
+            border-radius: 16px;
+            padding: 8px;
+            box-shadow: 0 10px 24px -14px rgba(28,20,16,.3);
+            z-index: 20;
+        }
+        .lang-menu[hidden] { display: none; }
+        .lang-menu-label { padding: 7px 10px 9px; font-size: 11.5px; color: var(--ink-2); }
+        .lang-opt {
+            display: flex; align-items: center; gap: 10px;
+            width: 100%;
+            padding: 11px 12px;
+            border: none;
+            border-radius: 11px;
+            background: transparent;
+            font: inherit;
+            color: var(--ink);
+            text-align: left;
+            cursor: pointer;
+        }
+        .lang-opt:hover { background: rgba(200,101,27,.06); }
+        .lang-opt[aria-checked="true"] { background: rgba(200,101,27,.1); }
+        .lang-opt .tick {
+            width: 16px; height: 16px; border-radius: 50%;
+            border: 1.5px solid rgba(28,20,16,.25);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; color: transparent;
+            flex: none;
+        }
+        .lang-opt[aria-checked="true"] .tick {
+            background: var(--saffron); border-color: var(--saffron); color: #FFF9F1;
+        }
+        .lang-opt .name-ta { font-family: var(--tamil); font-size: 15px; }
+        .lang-opt .name-en { font-size: 14.5px; }
+        .lang-sep { height: 1px; background: rgba(28,20,16,.08); margin: 7px 12px; }
+        .lang-soon-label { padding: 2px 12px 7px; font-size: 11px; color: var(--ink-2); }
+        .lang-soon { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 12px 10px; }
+        .lang-soon span {
+            font-size: 13px; padding: 5px 11px;
+            border-radius: 9px; background: var(--chip);
+            color: rgba(28,20,16,.5);
+        }
+
+        /* ── Thread ───────────────────────────────────────────── */
+        .thread {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 13px;
+            padding: 20px;
+            overflow-y: auto;
             scroll-behavior: smooth;
         }
+        .daymark {
+            align-self: center;
+            font-size: 11.5px;
+            letter-spacing: .04em;
+            color: rgba(28,20,16,.6);
+        }
+        .lang-ta .daymark { font-family: var(--tamil); }
 
-        .msg {
-            display: flex;
-            flex-direction: column;
+        .bubble { max-width: 88%; }
+        .bubble.user {
+            align-self: flex-end;
             max-width: 80%;
-            gap: 3px;
+            background: var(--jade);
+            color: var(--ground);
+            border-radius: 18px 18px 6px 18px;
+            padding: 13px 16px;
         }
-        .msg.user { align-self: flex-end; align-items: flex-end; }
-        .msg.bot  { align-self: flex-start; align-items: flex-start; }
-
-        .msg-label {
-            font-size: 11px;
-            color: var(--ink-muted);
-            padding: 0 4px;
-        }
-        .msg-bubble {
-            padding: 11px 15px;
-            border-radius: 16px;
-            font-size: 14px;
-            line-height: 1.65;
-            color: var(--ink);
-        }
-        .msg.user .msg-bubble {
-            background: var(--saffron);
-            color: #fff;
-            border-radius: 16px 16px 4px 16px;
-        }
-        .msg.bot .msg-bubble {
-            background: #fff;
-            border: 0.5px solid var(--border);
-            border-radius: 16px 16px 16px 4px;
-        }
-        .msg-tamil {
-            font-family: 'Noto Serif Tamil', serif;
-            font-size: 12px;
-            display: block;
-            margin-top: 5px;
-            opacity: 0.82;
-        }
-        .msg.user .msg-tamil { color: rgba(255,255,255,0.88); }
-        .msg.bot  .msg-tamil { color: var(--saffron-dark); }
-
-        /* Typing indicator */
-        .thinking {
-            display: none;
+        .bubble.bot {
             align-self: flex-start;
-            gap: 5px;
-            padding: 12px 16px;
-            background: #fff;
-            border: 0.5px solid var(--border);
-            border-radius: 16px 16px 16px 4px;
+            background: var(--surface);
+            border: 1px solid var(--rule-soft);
+            border-radius: 18px 18px 18px 6px;
+            padding: 15px 17px;
         }
-        .thinking.show { display: flex; }
-        .dot {
-            width: 7px; height: 7px;
+        .bubble.bot.declined {
+            border-color: rgba(123,29,45,.22);
+            border-left: 3px solid var(--maroon);
+        }
+        .bubble.stale { opacity: .55; }
+
+        .decline-label {
+            font-size: 11.5px;
+            letter-spacing: .03em;
+            color: var(--maroon);
+            margin-bottom: 8px;
+        }
+        .lang-ta .decline-label { font-family: var(--tamil); }
+
+        .body { font-size: 15px; line-height: 1.75; }
+        .body.ta { font-family: var(--tamil); font-size: 15.5px; line-height: 1.85; }
+        .body p + p { margin-top: 9px; }
+        .body .subhead {
+            margin-top: 9px;
+            font-size: 13.5px;
+            letter-spacing: .03em;
+            color: var(--maroon);
+        }
+        .body ul { margin: 5px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+        .body li { display: flex; gap: 8px; line-height: 1.5; }
+        .body li::before { content: '•'; color: var(--saffron); flex: none; }
+
+        .caret {
+            display: inline-block;
+            width: 2px; height: 1.05em;
+            vertical-align: -2px;
+            margin-left: 2px;
             background: var(--saffron);
-            border-radius: 50%;
-            animation: bounce 1.2s infinite;
+            animation: ku-blink 1s steps(1, end) infinite;
         }
-        .dot:nth-child(2) { animation-delay: 0.2s; }
-        .dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes bounce {
-            0%,80%,100% { transform: translateY(0); opacity: 0.35; }
-            40%          { transform: translateY(-5px); opacity: 1; }
+        @keyframes ku-blink { 0%,45% { opacity: 1; } 55%,100% { opacity: 0; } }
+        @keyframes ku-dot {
+            0%,60%,100% { transform: translateY(0); opacity: .35; }
+            30%         { transform: translateY(-4px); opacity: 1; }
         }
 
-        /* ── Controls area ───────────────────────── */
-        .controls {
-            padding: 16px 28px 22px;
-            border-top: 0.5px solid var(--border);
-            background: #fff;
+        /* Streaming status row inside a bubble */
+        .streamrow {
+            display: flex; align-items: center; gap: 7px;
+            margin-top: 10px;
+            font-size: 10.5px;
+            color: var(--saffron);
         }
-
-        .error-box {
-            display: none;
-            background: #FEF2F2;
-            border: 0.5px solid #FCA5A5;
-            border-radius: 8px;
-            padding: 9px 13px;
-            font-size: 13px;
-            color: #991B1B;
-            margin-bottom: 12px;
+        .streamrow.done { color: rgba(123,29,45,.8); }
+        .streamrow .live {
+            width: 5px; height: 5px; border-radius: 50%;
+            background: currentColor;
+            animation: ku-blink 1.2s ease-in-out infinite;
+            flex: none;
         }
-        .error-box.show { display: block; }
+        .streamrow.done .live { animation: none; }
+        .streamrow .stop {
+            margin-left: auto;
+            font-size: 11.5px;
+            color: var(--maroon);
+            background: none; border: none; padding: 0;
+            cursor: pointer;
+        }
+        .lang-ta .streamrow .stop { font-family: var(--tamil); }
 
-        .transcript-box {
-            background: var(--cream);
-            border: 0.5px solid var(--border);
-            border-radius: 10px;
-            padding: 10px 14px;
-            min-height: 46px;
-            margin-bottom: 13px;
+        /* Action row: translation pill and source links */
+        .actions {
+            margin-top: 11px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(123,29,45,.12);
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 9px;
         }
-        .transcript-icon { color: var(--saffron); font-size: 15px; flex-shrink: 0; }
-        .transcript-text {
-            flex: 1;
-            font-size: 14px;
-            color: var(--ink);
-            background: transparent;
-            border: none;
-            outline: none;
-            font-family: inherit;
-        }
-        .transcript-text::placeholder { color: var(--ink-muted); font-style: italic; }
-
-        .btn-row {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        /* Mic button */
-        .mic-btn {
-            width: 54px; height: 54px;
-            border-radius: 50%;
-            background: var(--saffron);
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.15s, transform 0.1s;
-            flex-shrink: 0;
-            position: relative;
-        }
-        .mic-btn:hover  { background: var(--saffron-dark); }
-        .mic-btn:active { transform: scale(0.95); }
-        .mic-btn.listening { background: var(--maroon); }
-        .mic-btn.listening::after {
-            content: '';
-            position: absolute;
-            width: 70px; height: 70px;
-            border-radius: 50%;
-            border: 2px solid var(--maroon);
-            animation: ripple 1s infinite;
-        }
-        @keyframes ripple {
-            from { transform: scale(0.82); opacity: 0.7; }
-            to   { transform: scale(1.45); opacity: 0; }
-        }
-        .mic-btn svg { width: 22px; height: 22px; }
-
-        /* Send button */
-        .send-btn {
-            flex: 1;
-            padding: 14px;
-            background: var(--jade);
-            color: #fff;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: opacity 0.15s;
-            font-family: inherit;
-        }
-        .send-btn:hover:not(:disabled) { opacity: 0.88; }
-        .send-btn:disabled { opacity: 0.38; cursor: not-allowed; }
-
-        /* Speak button */
-        .speak-btn {
-            padding: 14px 16px;
-            background: transparent;
-            border: 0.5px solid var(--border);
-            border-radius: 10px;
-            font-size: 13px;
-            color: var(--saffron-dark);
-            cursor: pointer;
-            transition: background 0.15s;
+        .src-label {
             white-space: nowrap;
-            font-family: inherit;
+            font-size: 11.5px;
+            letter-spacing: .04em;
+            color: var(--ink-2);
         }
-        .speak-btn:hover:not(:disabled) { background: var(--saffron-light); }
-        .speak-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+        .lang-ta .src-label { font-family: var(--tamil); }
+        .pill {
+            display: flex; align-items: center; gap: 7px;
+            font-size: 12px;
+            color: var(--ink-2);
+            padding: 6px 11px;
+            border-radius: 9px;
+            border: 1px solid rgba(28,20,16,.16);
+            background: transparent;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .lang-ta .pill { font-family: var(--tamil); }
+        .pill:hover { background: rgba(200,101,27,.06); }
+        .pill .swap { font-family: var(--mono); font-size: 10px; color: var(--saffron-ink); }
+        .src {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 11.5px;
+            padding: 6px 10px;
+            border-radius: 9px;
+            background: var(--ground);
+            border: 1px solid rgba(200,101,27,.3);
+            color: var(--ink);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .src::before {
+            content: '';
+            width: 5px; height: 5px; border-radius: 50%;
+            background: var(--saffron);
+        }
+        .src .out { color: var(--ink-2); font-size: 10px; }
 
-        /* ── Status bar ──────────────────────────── */
-        .status-bar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 9px 28px;
-            border-top: 0.5px solid var(--border);
-            background: var(--cream);
+        /* Expanded translation panel — bleeds to the bubble edges */
+        .xlate {
+            margin: 12px -17px 0;
+            padding: 11px 17px 12px;
+            border-top: 1px solid rgba(200,101,27,.28);
+            background: rgba(240,232,216,.55);
         }
-        .status-dot {
-            width: 7px; height: 7px;
-            border-radius: 50%;
-            background: #D97706;
-            flex-shrink: 0;
+        .xlate[hidden] { display: none; }
+        .xlate-head {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 7px;
+            font-size: 11.5px;
+            color: var(--ink-2);
         }
-        .status-dot.ok  { background: var(--jade); }
-        .status-dot.err { background: var(--maroon); }
-        .status-text { font-size: 12px; color: var(--ink-muted); }
-        .model-tag {
+        .xlate-head .swap { font-family: var(--mono); font-size: 10px; color: var(--saffron-ink); }
+        .xlate-head .hide {
             margin-left: auto;
-            font-size: 11px;
-            color: var(--ink-muted);
-            border: 0.5px solid var(--border);
-            padding: 2px 9px;
-            border-radius: 20px;
+            font-size: 11.5px;
+            color: var(--saffron-ink);
+            background: none; border: none; padding: 0;
+            cursor: pointer;
         }
+        .lang-ta .xlate-head .hide { font-family: var(--tamil); }
+        .xlate-body { font-size: 13px; line-height: 1.65; color: rgba(28,20,16,.75); }
+        .xlate-body.ta { font-family: var(--tamil); font-size: 13.5px; line-height: 1.8; }
 
-        /* ── Responsive ──────────────────────────── */
-        @media (max-width: 480px) {
-            .header { padding: 18px 20px 14px; }
-            .chat-area, .controls, .lang-bar, .status-bar { padding-left: 18px; padding-right: 18px; }
-            .speak-btn { display: none; }
+        /* Suggestion chips */
+        .chips { display: flex; flex-wrap: wrap; gap: 9px; padding-left: 2px; }
+        .bubble .chips { margin-top: 13px; padding-left: 0; gap: 8px; }
+        .chip {
+            font-size: 13.5px;
+            padding: 9px 14px;
+            border-radius: 14px;
+            background: rgba(240,232,216,.9);
+            border: 1px solid rgba(200,101,27,.28);
+            color: var(--saffron-ink);
+            cursor: pointer;
+        }
+        .lang-ta .chip { font-family: var(--tamil); }
+        .chip:hover { background: var(--chip); }
+        .bubble .chip { font-size: 13px; padding: 8px 13px; border-radius: 12px; }
+
+        /* Thinking dots */
+        .thinking {
+            align-self: flex-start;
+            display: flex; align-items: center; gap: 9px;
+            background: var(--surface);
+            border: 1px solid var(--rule-soft);
+            border-radius: 16px 16px 16px 5px;
+            padding: 11px 15px;
+        }
+        .thinking i {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: var(--saffron);
+            animation: ku-dot 1.1s ease-in-out infinite;
+        }
+        .thinking i:nth-child(2) { animation-delay: .16s; }
+        .thinking i:nth-child(3) { animation-delay: .32s; }
+        .thinking span {
+            font-size: 12.5px;
+            color: rgba(28,20,16,.6);
+            margin-left: 4px;
+        }
+        .lang-ta .thinking span { font-family: var(--tamil); }
+
+        /* Detected-language banner */
+        .detect {
+            align-self: stretch;
+            display: flex; align-items: center; gap: 11px;
+            background: rgba(200,101,27,.09);
+            border: 1px solid rgba(200,101,27,.35);
+            border-radius: 14px;
+            padding: 12px 14px;
+        }
+        .detect .mark {
+            width: 22px; height: 22px; border-radius: 50%;
+            border: 1.5px solid var(--saffron);
+            flex: none;
+        }
+        .detect .copy { flex: 1; font-size: 12px; line-height: 1.55; color: var(--ink-2); }
+        .detect .copy b {
+            display: block;
+            font-family: var(--tamil);
+            font-weight: 400; font-size: 13px;
+            color: var(--ink);
+        }
+        .detect .acts { display: flex; gap: 7px; flex: none; }
+        .detect button { font: inherit; font-size: 12px; padding: 8px 12px; border-radius: 10px; cursor: pointer; }
+        .detect .yes { background: var(--saffron); color: #FFF9F1; border: none; }
+        .detect .no  { background: transparent; border: 1px solid rgba(28,20,16,.2); color: var(--ink); }
+        .lang-en .detect .yes, .lang-ta .detect .no { font-family: var(--tamil); font-size: 12.5px; }
+
+        /* Inline network error */
+        .errcard {
+            align-self: stretch;
+            display: flex; align-items: center; gap: 12px;
+            background: rgba(123,29,45,.06);
+            border: 1px solid rgba(123,29,45,.28);
+            border-radius: 14px;
+            padding: 13px 15px;
+        }
+        .errcard .bang {
+            width: 26px; height: 26px; border-radius: 50%;
+            background: var(--maroon); color: var(--ground);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex: none;
+        }
+        .errcard .copy { flex: 1; }
+        .errcard .copy b {
+            display: block;
+            font-weight: 400;
+            font-size: 13.5px; line-height: 1.6; color: var(--maroon);
+        }
+        .errcard .copy span {
+            font-size: 12px; line-height: 1.55;
+            color: rgba(123,29,45,.8);
+        }
+        .lang-ta .errcard .copy b, .lang-ta .errcard .copy span { font-family: var(--tamil); }
+        .errcard button {
+            font: inherit;
+            font-size: 12.5px;
+            padding: 8px 13px; border-radius: 10px;
+            background: var(--maroon); color: var(--ground);
+            border: none; flex: none; cursor: pointer;
+        }
+        .lang-ta .errcard button { font-family: var(--tamil); }
+
+        .disclaimer {
+            align-self: center;
+            margin-top: auto;
+            max-width: 82%;
+            text-align: center;
+            font-size: 11.5px;
+            line-height: 1.55;
+            color: rgba(28,20,16,.62);
+        }
+        .lang-ta .disclaimer { font-family: var(--tamil); }
+
+        /* ── Composer ─────────────────────────────────────────── */
+        .composer {
+            display: flex; align-items: flex-end; gap: 11px;
+            padding: 14px 18px;
+            border-top: 1px solid var(--rule);
+            background: var(--chrome);
+            flex: none;
+        }
+        .field {
+            flex: 1;
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px;
+            border: 1px solid rgba(123,29,45,.16);
+            border-radius: 16px;
+            background: var(--field);
+        }
+        .field:focus-within {
+            background: var(--surface);
+            border-color: var(--jade);
+            box-shadow: inset 0 0 0 .5px var(--jade);
+        }
+        .script-hint {
+            font-family: var(--mono);
+            font-size: 10px;
+            padding: 3px 6px;
+            border-radius: 6px;
+            background: var(--ground);
+            border: 1px solid rgba(28,20,16,.14);
+            color: var(--ink-2);
+            flex: none;
+        }
+        .field input {
+            flex: 1;
+            min-width: 0;
+            border: none; outline: none; background: transparent;
+            font-family: var(--tamil);
+            font-size: 14.5px;
+            color: var(--ink);
+            padding: 3px 0;
+        }
+        .lang-en .field input { font-family: 'Inter', system-ui, sans-serif; font-size: 14px; }
+        .field input::placeholder { color: rgba(28,20,16,.5); }
+
+        .icon-btn {
+            width: 46px; height: 46px;
+            border-radius: 15px;
+            border: none;
+            display: flex; align-items: center; justify-content: center;
+            flex: none;
+            cursor: pointer;
+        }
+        .mic { background: var(--field-idle); color: rgba(28,20,16,.5); }
+        .mic svg { width: 20px; height: 20px; }
+        .mic.recording { background: var(--maroon); color: var(--ground); }
+        .send { background: var(--field-idle); color: rgba(28,20,16,.28); font-size: 17px; }
+        .send:enabled { background: var(--jade); color: var(--ground); }
+        .send:disabled { cursor: not-allowed; }
+
+        /* ── Footer ───────────────────────────────────────────── */
+        .foot {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 20px;
+            background: var(--footer);
+            border-top: 1px solid rgba(123,29,45,.12);
+            font-size: 10.5px;
+            color: var(--ink-2);
+            flex: none;
+        }
+        .lang-ta .foot { font-family: var(--tamil); font-size: 11px; }
+        .foot-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--jade); flex: none; }
+        .app.offline .foot { color: var(--maroon); }
+        .app.offline .foot-dot { background: var(--saffron); animation: ku-blink 1.4s ease-in-out infinite; }
+        .build { margin-left: auto; font-family: var(--mono); font-size: 10.5px; letter-spacing: .02em; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; }
         }
     </style>
 </head>
 <body>
 
-<div class="app">
+<div class="app lang-ta" id="app">
 
-    <!-- Header -->
-    <div class="header">
-        <div class="header-title">
-            <span class="header-dot"></span>Tamil Voice Assistant
+    <header class="hdr">
+        <div class="seal">கு</div>
+        <div class="hdr-text">
+            <div class="brand" id="brand">குரலகம்</div>
+            <div class="presence"><span class="presence-dot"></span><span id="presenceText">ஆன்லைனில் உள்ளது</span></div>
         </div>
-        <div class="header-sub">குரலகம் — Powered by Groq AI</div>
-    </div>
 
-    <!-- Language bar -->
-    <div class="lang-bar">
-        <span class="lang-label">Language:</span>
-        <button class="lang-chip active" onclick="setLang('ta-IN','Tamil')">Tamil (தமிழ்)</button>
-        <button class="lang-chip" onclick="setLang('hi-IN','Hindi')">Hindi (हिंदी)</button>
-        <button class="lang-chip" onclick="setLang('te-IN','Telugu')">Telugu (తెలుగు)</button>
-        <button class="lang-chip" onclick="setLang('kn-IN','Kannada')">Kannada (ಕನ್ನಡ)</button>
-    </div>
-
-    <!-- Chat messages -->
-    <div class="chat-area" id="chat">
-        <div class="msg bot">
-            <span class="msg-label">குரலகம் (Assistant)</span>
-            <div class="msg-bubble">
-                வணக்கம்! I'm Kuralargam, your Tamil voice assistant. Press the mic and speak — I'll understand and respond in Tamil.
-                <span class="msg-tamil">(Hello! I am ready to help you.)</span>
+        <div class="lang-wrap">
+            <button class="lang-btn" id="langBtn" type="button" aria-haspopup="true" aria-expanded="false">
+                <span class="globe"></span><span id="langBtnText">தமிழ்</span><span class="caret">▾</span>
+            </button>
+            <div class="lang-menu" id="langMenu" role="menu" hidden>
+                <div class="lang-menu-label" id="langMenuLabel">இடைமுக மொழி</div>
+                <button class="lang-opt" type="button" role="menuitemradio" data-lang="ta" aria-checked="true">
+                    <span class="tick">✓</span><span class="name-ta">தமிழ்</span>
+                </button>
+                <button class="lang-opt" type="button" role="menuitemradio" data-lang="en" aria-checked="false">
+                    <span class="tick">✓</span><span class="name-en">English</span>
+                </button>
+                <div class="lang-sep"></div>
+                <div class="lang-soon-label" id="langSoonLabel">விரைவில்</div>
+                <div class="lang-soon"><span>हिन्दी</span><span>తెలుగు</span><span>ಕನ್ನಡ</span></div>
             </div>
         </div>
-    </div>
+    </header>
 
-    <!-- Typing indicator (inside chat flow) -->
-    <div class="thinking" id="thinking" style="margin: 0 28px 16px;">
-        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-    </div>
+    <main class="thread" id="thread" aria-live="polite"></main>
 
-    <!-- Controls -->
-    <div class="controls">
-        <div class="error-box" id="errBox"></div>
-
-        <div class="transcript-box">
-            <span class="transcript-icon">💬</span>
-            <input type="text" class="transcript-text" id="transcriptInput" 
-                   placeholder="Type or speak in Tamil..." 
-                   autocomplete="off"
-                   oninput="checkInput()"
-                   onkeydown="if(event.key === 'Enter') sendMessage()">
+    <div class="composer">
+        <div class="field">
+            <span class="script-hint" id="scriptHint">அ / A</span>
+            <input type="text" id="input" autocomplete="off" enterkeyhint="send"
+                   placeholder="தமிழில் தட்டச்சு செய்யுங்கள்…">
         </div>
-
-        <div class="btn-row">
-            <!-- Mic button -->
-            <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="Tap to speak">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="9" y="1" width="6" height="11" rx="3"/>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                    <line x1="12" y1="19" x2="12" y2="23"/>
-                    <line x1="8"  y1="23" x2="16" y2="23"/>
-                </svg>
-            </button>
-
-            <!-- Send button -->
-            <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
-                Send to Groq →
-            </button>
-
-            <!-- Speak response button -->
-            <button class="speak-btn" id="speakBtn" onclick="speakLast()" disabled>
-                🔊 Speak
-            </button>
-        </div>
+        <button class="icon-btn mic" id="micBtn" type="button" title="Speak">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="1" width="6" height="11" rx="3"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+        </button>
+        <button class="icon-btn send" id="sendBtn" type="button" disabled>➔</button>
     </div>
 
-    <!-- Status bar -->
-    <div class="status-bar">
-        <div class="status-dot ok" id="statusDot"></div>
-        <span class="status-text" id="statusText">Ready — tap mic to begin</span>
-        <span class="model-tag" id="modelTag">Groq · ta-IN</span>
-    </div>
+    <footer class="foot">
+        <span class="foot-dot"></span><span id="footText">இணைக்கப்பட்டது</span>
+        <span class="build">kuralagam-v1</span>
+    </footer>
 </div>
 
-<script th:inline="javascript">
-    /*[# th:utext="''" /]*/
+<script th:inline="none">
+(function () {
+    'use strict';
 
-    // ── State ────────────────────────────────────
-    let currentLang     = 'ta-IN';
-    let currentLangName = 'Tamil';
-    let mediaRecorder   = null;
-    let audioChunks     = [];
-    let isRecording     = false;
-    let lastBotText     = '';
+    // ── Chrome strings ────────────────────────────────────────
+    // One interface language at a time (design turn 3): every chrome string
+    // flips together, and nothing is glossed inline.
+    var STRINGS = {
+        ta: {
+            brand: 'குரலகம்',
+            online: 'ஆன்லைனில் உள்ளது',
+            offline: 'மீண்டும் இணைக்கிறது',
+            langName: 'தமிழ்',
+            menuLabel: 'இடைமுக மொழி',
+            soon: 'விரைவில்',
+            placeholder: 'தமிழில் தட்டச்சு செய்யுங்கள்…',
+            connected: 'இணைக்கப்பட்டது',
+            disconnected: 'இணைப்பு துண்டிக்கப்பட்டது — மீண்டும் முயல்கிறது',
+            today: 'இன்று',
+            greeting: 'வணக்கம்! நான் குரலகம். தமிழ்நாடு அரசின் சுகாதாரம் மற்றும் கல்வித் திட்டங்கள் பற்றி உங்களுக்கு உதவுவேன் — முதலமைச்சரின் விரிவான மருத்துவக் காப்பீட்டுத் திட்டம் (CMCHIS), இலவச மருந்து வழங்கல், கல்வி உதவித்தொகை, சத்துணவுத் திட்டம். என்ன தெரிந்துகொள்ள விரும்புகிறீர்கள்?',
+            starters: ['CMCHIS-ல் யார் சேரலாம்?', 'உதவித்தொகை விண்ணப்பம்', 'அருகில் இலவச மருந்தகம்'],
+            declineFollowups: ['CMCHIS தகுதி', 'கல்வி உதவித்தொகை'],
+            disclaimer: 'குரலகம் சுகாதாரம் மற்றும் கல்வித் திட்டங்கள் பற்றி மட்டுமே பதிலளிக்கும்.',
+            translate: 'மொழிபெயர்ப்பு',
+            hide: 'மறை',
+            sourceLabel: 'ஆதாரம்',
+            thinking: 'யோசிக்கிறேன்…',
+            streaming: 'பதில் வந்துகொண்டிருக்கிறது',
+            stop: 'நிறுத்து',
+            stopped: 'நிறுத்தப்பட்டது',
+            outOfScope: 'எனது எல்லைக்கு வெளியே',
+            errTitle: 'இணைப்பில் சிக்கல் — பதில் வரவில்லை.',
+            errBody: 'உங்கள் முந்தைய செய்திகள் பாதுகாப்பாக உள்ளன.',
+            retry: 'மீண்டும் முயற்சி',
+            listening: 'கேட்டுக்கொண்டிருக்கிறேன்…',
+            micError: 'ஒலிவாங்கியை அணுக முடியவில்லை.',
+            sttError: 'பேச்சை உரையாக மாற்ற முடியவில்லை.',
+            speak: 'பேசுங்கள்',
+            // The banner addresses someone typing the *other* language, so it
+            // deliberately speaks that language (design 3b).
+            detectTitle: 'நீங்கள் ஆங்கிலத்தில் எழுதினீர்கள்.',
+            detectBody: 'Keep the app in Tamil, or switch the interface to English?',
+            detectYes: 'English',
+            detectNo: 'தமிழே',
+            months: ['ஜனவரி','பிப்ரவரி','மார்ச்','ஏப்ரல்','மே','ஜூன்','ஜூலை','ஆகஸ்ட்','செப்டம்பர்','அக்டோபர்','நவம்பர்','டிசம்பர்']
+        },
+        en: {
+            brand: 'Kuralagam',
+            online: 'Online',
+            offline: 'Reconnecting',
+            langName: 'English',
+            menuLabel: 'Interface language',
+            soon: 'Coming soon',
+            placeholder: 'Type your question…',
+            connected: 'Connected',
+            disconnected: 'Disconnected — retrying',
+            today: 'Today',
+            greeting: 'Hello! I am Kuralagam. I help you with the Tamil Nadu government’s Health and Education schemes — the Chief Minister’s Comprehensive Health Insurance Scheme (CMCHIS), free medicines, education scholarships and the mid-day meal scheme. What would you like to know?',
+            starters: ['Who can join CMCHIS?', 'Scholarship application', 'Free medicines nearby'],
+            declineFollowups: ['CMCHIS eligibility', 'Education scholarships'],
+            disclaimer: 'Kuralagam answers questions about Health and Education schemes only.',
+            translate: 'Translation',
+            hide: 'Hide',
+            sourceLabel: 'Source',
+            thinking: 'Thinking…',
+            streaming: 'Replying',
+            stop: 'Stop',
+            stopped: 'Stopped',
+            outOfScope: 'Outside my scope',
+            errTitle: 'Connection problem — no reply came through.',
+            errBody: 'Your earlier messages are safe.',
+            retry: 'Try again',
+            listening: 'Listening…',
+            micError: 'Could not reach the microphone.',
+            sttError: 'Could not turn that speech into text.',
+            speak: 'Speak',
+            detectTitle: 'நீங்கள் தமிழில் எழுதினீர்கள்.',
+            detectBody: 'Keep the app in English, or switch the interface to Tamil?',
+            detectYes: 'தமிழ்',
+            detectNo: 'English',
+            months: ['January','February','March','April','May','June','July','August','September','October','November','December']
+        }
+    };
 
-    // Per-tab: survives refresh, resets in a new tab.
-    let conversationId = sessionStorage.getItem('kuralagam_conversationId');
+    var LANG_META = {
+        ta: { code: 'ta-IN', name: 'Tamil',   swap: 'அ→A' },
+        en: { code: 'en-IN', name: 'English', swap: 'A→அ' }
+    };
+
+    // The scope marker the model prefixes to an out-of-domain decline.
+    // It is a routing signal, never reader-facing text.
+    var MARK = '[OFF_TOPIC]';
+
+    // ── State ─────────────────────────────────────────────────
+    var uiLang = localStorage.getItem('kuralagam.uiLang') || 'ta';
+    if (!STRINGS[uiLang]) uiLang = 'ta';
+
+    // "Once opened, later replies show it too" (design 3c).
+    var translateSticky = localStorage.getItem('kuralagam.translate') === 'on';
+
+    var langOffered = false;   // the switch banner is offered once per session
+    var streamAbort = null;
+    var pendingRetry = null;   // text held for the error card's retry
+    var recorder = null;
+    var recording = false;
+    var speakReplies = false;  // a spoken question earns a spoken answer
+
+    var conversationId = sessionStorage.getItem('kuralagam_conversationId');
     if (!conversationId) {
-        conversationId = crypto.randomUUID();
+        conversationId = (window.crypto && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : String(Date.now()) + Math.random().toString(16).slice(2);
         sessionStorage.setItem('kuralagam_conversationId', conversationId);
     }
 
-    // ── Language switching ────────────────────────
-    function setLang(code, name) {
-        currentLang     = code;
-        currentLangName = name;
-        document.querySelectorAll('.lang-chip').forEach(c => c.classList.remove('active'));
-        if (window.event) window.event.target.classList.add('active');
-        document.getElementById('modelTag').textContent = 'Groq · ' + code;
-        setStatus('Language set to ' + name, 'ok');
+    function $(id) { return document.getElementById(id); }
+    var app = $('app'), thread = $('thread'), input = $('input'), sendBtn = $('sendBtn');
+
+    function t() { return STRINGS[uiLang]; }
+    function other(lang) { return lang === 'ta' ? 'en' : 'ta'; }
+
+    // Tamil Unicode block. The composer stays script-agnostic, so what the user
+    // actually typed — not the interface setting — decides the reply language.
+    function detectLang(text) { return /[\u0B80-\u0BFF]/.test(text) ? 'ta' : 'en'; }
+
+    function el(tag, cls, text) {
+        var n = document.createElement(tag);
+        if (cls) n.className = cls;
+        if (text != null) n.textContent = text;
+        return n;
     }
 
-    // ── UI helpers ───────────────────────────────
-    function setStatus(msg, type) {
-        document.getElementById('statusText').textContent = msg;
-        const dot = document.getElementById('statusDot');
-        dot.className = 'status-dot' + (type ? ' ' + type : '');
+    function scrollDown() { thread.scrollTop = thread.scrollHeight; }
+
+    // ── Interface language ────────────────────────────────────
+    function applyLang() {
+        var s = t();
+        var offline = app.classList.contains('offline');
+        app.className = 'app lang-' + uiLang + (offline ? ' offline' : '');
+        document.documentElement.lang = uiLang;
+        $('brand').textContent = s.brand;
+        $('presenceText').textContent = offline ? s.offline : s.online;
+        $('footText').textContent = offline ? s.disconnected : s.connected;
+        $('langBtnText').textContent = s.langName;
+        $('langMenuLabel').textContent = s.menuLabel;
+        $('langSoonLabel').textContent = s.soon;
+        $('scriptHint').textContent = uiLang === 'ta' ? 'அ / A' : 'A / அ';
+        $('micBtn').title = s.speak;
+        input.placeholder = s.placeholder;
+        Array.prototype.forEach.call(document.querySelectorAll('.lang-opt'), function (b) {
+            b.setAttribute('aria-checked', String(b.getAttribute('data-lang') === uiLang));
+        });
+        try { localStorage.setItem('kuralagam.uiLang', uiLang); } catch (e) { /* private mode */ }
     }
 
-    function showError(msg) {
-        const box = document.getElementById('errBox');
-        box.textContent = msg;
-        box.classList.add('show');
-        setTimeout(() => box.classList.remove('show'), 6000);
+    function setLang(next) {
+        if (next === uiLang || !STRINGS[next]) return;
+        uiLang = next;
+        applyLang();
+        resetThread();
     }
 
-    function addMessage(role, text, translation) {
-        const chat = document.getElementById('chat');
-        const msg  = document.createElement('div');
-        msg.className = 'msg ' + role;
-
-        const label  = document.createElement('span');
-        label.className = 'msg-label';
-        label.textContent = role === 'user' ? 'நீங்கள் (You)' : 'குரலகம் (Assistant)';
-
-        const bubble = document.createElement('div');
-        bubble.className = 'msg-bubble';
-        bubble.textContent = text;
-
-        if (translation) {
-            const tr = document.createElement('span');
-            tr.className = 'msg-tamil';
-            tr.textContent = translation;
-            bubble.appendChild(tr);
-        }
-
-        msg.appendChild(label);
-        msg.appendChild(bubble);
-        chat.appendChild(msg);
-        chat.scrollTop = chat.scrollHeight;
+    function closeMenu() {
+        $('langMenu').hidden = true;
+        $('langBtn').setAttribute('aria-expanded', 'false');
     }
 
-    function addStreamingBotMessage() {
-        const chat = document.getElementById('chat');
-        const msg  = document.createElement('div');
-        msg.className = 'msg bot';
+    $('langBtn').addEventListener('click', function (e) {
+        e.stopPropagation();
+        var opening = $('langMenu').hidden;
+        $('langMenu').hidden = !opening;
+        $('langBtn').setAttribute('aria-expanded', String(opening));
+    });
+    $('langMenu').addEventListener('click', function (e) {
+        e.stopPropagation();
+        var opt = e.target.closest ? e.target.closest('.lang-opt') : null;
+        if (!opt) return;
+        closeMenu();
+        setLang(opt.getAttribute('data-lang'));
+    });
+    document.addEventListener('click', closeMenu);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
 
-        const label  = document.createElement('span');
-        label.className = 'msg-label';
-        label.textContent = 'குரலகம் (Assistant)';
+    // ── Connection state ──────────────────────────────────────
+    function setOnline(ok) {
+        if (app.classList.contains('offline') === !ok) return;
+        app.classList.toggle('offline', !ok);
+        var s = t();
+        $('presenceText').textContent = ok ? s.online : s.offline;
+        $('footText').textContent = ok ? s.connected : s.disconnected;
+    }
+    window.addEventListener('online',  function () { setOnline(true); });
+    window.addEventListener('offline', function () { setOnline(false); });
 
-        const bubble = document.createElement('div');
-        bubble.className = 'msg-bubble';
+    // ── Opening state ─────────────────────────────────────────
+    function resetThread() {
+        thread.textContent = '';
+        var s = t();
+        var now = new Date();
+        thread.appendChild(el('div', 'daymark',
+            s.today + ' · ' + now.getDate() + ' ' + s.months[now.getMonth()]));
 
-        msg.appendChild(label);
-        msg.appendChild(bubble);
-        chat.appendChild(msg);
-        chat.scrollTop = chat.scrollHeight;
-        return bubble;
+        var intro = makeBotBubble(uiLang);
+        intro.setText(s.greeting);
+        thread.appendChild(intro.node);
+        // The intro's own gloss is the same greeting in the other language.
+        intro.setActions(STRINGS[other(uiLang)].greeting, []);
+
+        var chips = el('div', 'chips');
+        chips.setAttribute('data-opening', '');
+        s.starters.forEach(function (q) { chips.appendChild(makeChip(q)); });
+        thread.appendChild(chips);
+
+        var note = el('div', 'disclaimer', s.disclaimer);
+        note.setAttribute('data-opening', '');
+        thread.appendChild(note);
+        scrollDown();
     }
 
-    // Mirrors GroqService.splitReply — first line is the reply, a later
-    // parenthesized line is the translation.
-    function finalizeBotMessage(bubble, rawText) {
-        const lines = rawText.split('\n');
-        const mainReply = (lines[0] || '').trim();
-        let translation = null;
-        for (let i = 1; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (line.startsWith('(') && line.endsWith(')')) {
-                translation = line;
-                break;
-            }
-        }
-
-        bubble.textContent = mainReply;
-        if (translation) {
-            const tr = document.createElement('span');
-            tr.className = 'msg-tamil';
-            tr.textContent = translation;
-            bubble.appendChild(tr);
-        }
-
-        lastBotText = mainReply;
+    function makeChip(text) {
+        var c = el('button', 'chip', text);
+        c.type = 'button';
+        c.addEventListener('click', function () { send(text); });
+        return c;
     }
 
-    // ── Microphone / STT (Groq Whisper) ──────────
-    async function toggleMic() {
-        if (isRecording) {
-            stopRecording();
-        } else {
-            await startRecording();
-        }
+    function clearOpeningFurniture() {
+        Array.prototype.forEach.call(thread.querySelectorAll('[data-opening]'), function (n) {
+            n.remove();
+        });
     }
 
-    async function startRecording() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            showError("Your browser does not support audio recording.");
-            return;
-        }
-
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-
-            mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) audioChunks.push(e.data);
-            };
-
-            mediaRecorder.onstart = () => {
-                isRecording = true;
-                document.getElementById('micBtn').classList.add('listening');
-                const inp = document.getElementById('transcriptInput');
-                inp.value = '';
-                inp.placeholder = 'Listening...';
-                setStatus('Listening — tap mic again to finish', '');
-            };
-
-            mediaRecorder.onstop = async () => {
-                isRecording = false;
-                document.getElementById('micBtn').classList.remove('listening');
-                setStatus('Converting speech to text...', 'ok');
-                
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                await performTranscription(audioBlob);
-            };
-
-            mediaRecorder.start();
-        } catch (err) {
-            console.error("Mic Error:", err);
-            showError("Could not access microphone. Ensure permissions are granted.");
-        }
-    }
-
-    function stopRecording() {
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            mediaRecorder.stop();
-            // Stop all tracks to release the microphone (turns off the red light)
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        }
-    }
-
-    async function performTranscription(blob) {
-        const formData = new FormData();
-        formData.append('audio', blob);
-        formData.append('language', currentLang);
-
-        try {
-            const res = await fetch('/api/transcribe', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                const inp = document.getElementById('transcriptInput');
-                inp.value = data.text;
-                setStatus('Thinking...', 'ok');
-                checkInput();
-                
-                // Auto-trigger send for a seamless voice experience
-                await sendMessage();
-            } else {
-                throw new Error(data.error || "Transcription failed");
-            }
-        } catch (err) {
-            console.error("Transcription Error:", err);
-            setStatus('Mic error', 'err');
-            showError("Groq Whisper error: " + err.message);
-            resetTranscript();
-        }
-    }
-
-    function checkInput() {
-        const val = document.getElementById('transcriptInput').value.trim();
-        document.getElementById('sendBtn').disabled = (val === '');
-    }
-
-    function resetTranscript() {
-        const inp = document.getElementById('transcriptInput');
-        inp.value = '';
-        inp.placeholder = 'Type or speak in Tamil...';
-        document.getElementById('sendBtn').disabled = true;
-    }
-
-    // ── Send to Groq (LLM Chat, streamed over SSE) ────────────────
-    async function sendMessage() {
-        const inp = document.getElementById('transcriptInput');
-        const textToSend = inp.value.trim();
-        if (!textToSend) return;
-
-        resetTranscript();
-
-        addMessage('user', textToSend);
-        setStatus('Sending to Groq...', '');
-        document.getElementById('thinking').classList.add('show');
-        document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
-
-        let botBubble = null;
-        let rawText   = '';
-
-        try {
-            const res = await fetch('/api/chat/stream', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message:        textToSend,
-                    language:       currentLang,
-                    languageName:   currentLangName,
-                    conversationId: conversationId
-                })
-            });
-
-            document.getElementById('thinking').classList.remove('show');
-
-            if (!res.ok || !res.body) {
-                setStatus('Error from server', 'err');
-                showError('Server error while generating a response.');
+    // ── Message rendering ─────────────────────────────────────
+    // Model text is only ever inserted with textContent — never innerHTML.
+    function renderBody(container, text, lang) {
+        container.className = 'body' + (lang === 'ta' ? ' ta' : '');
+        container.textContent = '';
+        var list = null;
+        text.split('\n').forEach(function (raw) {
+            var line = raw.trim();
+            if (!line) { list = null; return; }
+            if (/^[-*•]\s+/.test(line)) {
+                if (!list) { list = el('ul'); container.appendChild(list); }
+                list.appendChild(el('li', null, line.replace(/^[-*•]\s+/, '')));
                 return;
             }
+            list = null;
+            // A short line ending in a colon reads as a section heading (design 1b).
+            if (line.length < 44 && /[:：]$/.test(line)) {
+                container.appendChild(el('div', 'subhead', line.replace(/[:：]$/, '')));
+            } else {
+                container.appendChild(el('p', null, line));
+            }
+        });
+    }
 
-            botBubble = addStreamingBotMessage();
+    function makeBotBubble(replyLang) {
+        var node = el('div', 'bubble bot');
+        var body = el('div', 'body');
+        var xlate = el('div', 'xlate');
+        xlate.hidden = true;
+        node.appendChild(body);
+        node.appendChild(xlate);
 
-            const reader  = res.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
+        return {
+            node: node,
+            body: body,
 
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
+            setText: function (text) { renderBody(body, text, replyLang); },
 
-                let frameEnd;
-                while ((frameEnd = buffer.indexOf('\n\n')) !== -1) {
-                    const frame = buffer.slice(0, frameEnd);
-                    buffer = buffer.slice(frameEnd + 2);
-                    const dataLine = frame.split('\n').find(l => l.startsWith('data:'));
-                    if (dataLine) {
-                        rawText += dataLine.slice(5).replace(/^ /, '');
-                        botBubble.textContent = rawText;
-                        document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
-                    }
+            markDeclined: function () {
+                node.classList.add('declined');
+                node.insertBefore(el('div', 'decline-label', t().outOfScope), node.firstChild);
+                var chips = el('div', 'chips');
+                t().declineFollowups.forEach(function (q) { chips.appendChild(makeChip(q)); });
+                node.appendChild(chips);
+            },
+
+            // The gloss sits behind its own pill, off by default; the sources
+            // sit beside it as ஆதாரம் links (designs 1a–1c, 3c).
+            setActions: function (translation, sources) {
+                var s = t();
+                var actions = el('div', 'actions');
+
+                if (translation) {
+                    var glossLang = other(replyLang);
+                    var head = el('div', 'xlate-head');
+                    head.appendChild(el('span', 'swap', LANG_META[replyLang].swap));
+                    head.appendChild(el('span', null, STRINGS[glossLang].langName));
+                    var hide = el('button', 'hide', s.hide);
+                    hide.type = 'button';
+                    head.appendChild(hide);
+                    xlate.textContent = '';
+                    xlate.appendChild(head);
+                    xlate.appendChild(el('div', 'xlate-body' + (glossLang === 'ta' ? ' ta' : ''), translation));
+
+                    var pill = el('button', 'pill');
+                    pill.type = 'button';
+                    pill.appendChild(el('span', 'swap', LANG_META[replyLang].swap));
+                    pill.appendChild(el('span', null, s.translate));
+
+                    var show = function (on) {
+                        xlate.hidden = !on;
+                        pill.hidden = on;
+                        translateSticky = on;
+                        try {
+                            localStorage.setItem('kuralagam.translate', on ? 'on' : 'off');
+                        } catch (e) { /* private mode */ }
+                    };
+                    pill.addEventListener('click', function () { show(true); });
+                    hide.addEventListener('click', function () { show(false); });
+                    show(translateSticky);
+
+                    actions.appendChild(pill);
                 }
+
+                if (sources && sources.length) {
+                    actions.appendChild(el('div', 'src-label', s.sourceLabel));
+                    sources.slice(0, 2).forEach(function (src) {
+                        var a = el('a', 'src');
+                        a.href = src.url;
+                        a.target = '_blank';
+                        a.rel = 'noopener noreferrer';
+                        a.title = src.label || src.host;
+                        a.appendChild(el('span', null, src.host));
+                        a.appendChild(el('span', 'out', '↗'));
+                        actions.appendChild(a);
+                    });
+                }
+
+                if (actions.children.length) node.appendChild(actions);
+            }
+        };
+    }
+
+    function addUser(text) {
+        var node = el('div', 'bubble user');
+        node.appendChild(el('div', 'body' + (detectLang(text) === 'ta' ? ' ta' : ''), text));
+        thread.appendChild(node);
+        scrollDown();
+        return node;
+    }
+
+    // ── Detected-language banner ──────────────────────────────
+    function maybeOfferSwitch(replyLang) {
+        if (langOffered || replyLang === uiLang) return;
+        langOffered = true;
+        var s = t();
+
+        var card = el('div', 'detect');
+        card.appendChild(el('span', 'mark'));
+
+        var copy = el('div', 'copy');
+        copy.appendChild(el('b', null, s.detectTitle));
+        copy.appendChild(document.createTextNode(s.detectBody));
+        card.appendChild(copy);
+
+        var acts = el('div', 'acts');
+        var yes = el('button', 'yes', s.detectYes);
+        var no  = el('button', 'no',  s.detectNo);
+        yes.type = no.type = 'button';
+        yes.addEventListener('click', function () { card.remove(); setLang(replyLang); });
+        no.addEventListener('click',  function () { card.remove(); });
+        acts.appendChild(yes);
+        acts.appendChild(no);
+        card.appendChild(acts);
+
+        thread.appendChild(card);
+        scrollDown();
+    }
+
+    // ── Inline network error ──────────────────────────────────
+    function showError(userNode, text) {
+        var s = t();
+        pendingRetry = text;
+        if (userNode) userNode.classList.add('stale');
+
+        var card = el('div', 'errcard');
+        card.appendChild(el('div', 'bang', '!'));
+        var copy = el('div', 'copy');
+        copy.appendChild(el('b', null, s.errTitle));
+        copy.appendChild(el('span', null, s.errBody));
+        card.appendChild(copy);
+
+        var retry = el('button', null, s.retry);
+        retry.type = 'button';
+        retry.addEventListener('click', function () {
+            card.remove();
+            if (userNode) userNode.classList.remove('stale');
+            var again = pendingRetry;
+            pendingRetry = null;
+            if (again) send(again, userNode);
+        });
+        card.appendChild(retry);
+
+        thread.appendChild(card);
+        scrollDown();
+    }
+
+    // ── Send ──────────────────────────────────────────────────
+    function refreshSend() { sendBtn.disabled = input.value.trim() === ''; }
+    input.addEventListener('input', refreshSend);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') send(); });
+    sendBtn.addEventListener('click', function () { send(); });
+
+    function send(preset, reuseNode) {
+        var text = (preset != null ? preset : input.value).trim();
+        if (!text || streamAbort) return;
+
+        input.value = '';
+        refreshSend();
+        clearOpeningFurniture();
+
+        var userNode = reuseNode || addUser(text);
+        var replyLang = detectLang(text);
+        maybeOfferSwitch(replyLang);
+
+        var s = t();
+        var thinking = el('div', 'thinking');
+        thinking.appendChild(el('i'));
+        thinking.appendChild(el('i'));
+        thinking.appendChild(el('i'));
+        thinking.appendChild(el('span', null, s.thinking));
+        thread.appendChild(thinking);
+        scrollDown();
+
+        var controller = new AbortController();
+        streamAbort = controller;
+
+        var bot = null, raw = '', sources = [], stopped = false, streamRow = null, settled = false;
+
+        function ensureBubble() {
+            if (bot) return;
+            thinking.remove();
+            bot = makeBotBubble(replyLang);
+            thread.appendChild(bot.node);
+
+            streamRow = el('div', 'streamrow');
+            streamRow.appendChild(el('span', 'live'));
+            streamRow.appendChild(el('span', null, s.streaming));
+            var stop = el('button', 'stop', s.stop);
+            stop.type = 'button';
+            stop.addEventListener('click', function () {
+                stopped = true;
+                controller.abort();
+            });
+            streamRow.appendChild(stop);
+            bot.node.appendChild(streamRow);
+            scrollDown();
+        }
+
+        // Strip the scope marker from anything the reader sees.
+        function visible(value) {
+            var v = value.replace(/^\s+/, '');
+            return v.indexOf(MARK) === 0 ? v.slice(MARK.length).replace(/^\s+/, '') : value;
+        }
+
+        fetch('/api/chat/stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+                message: text,
+                language: LANG_META[replyLang].code,
+                languageName: LANG_META[replyLang].name,
+                conversationId: conversationId
+            })
+        }).then(function (res) {
+            if (!res.ok || !res.body) throw new Error('chat/stream returned ' + res.status);
+            setOnline(true);
+
+            var reader = res.body.getReader();
+            var decoder = new TextDecoder();
+            var buffer = '';
+
+            function pump() {
+                return reader.read().then(function (chunk) {
+                    if (chunk.done) return;
+                    buffer += decoder.decode(chunk.value, { stream: true });
+
+                    var end;
+                    while ((end = buffer.indexOf('\n\n')) !== -1) {
+                        var frame = buffer.slice(0, end);
+                        buffer = buffer.slice(end + 2);
+
+                        // Per the SSE spec a payload containing newlines arrives as
+                        // several data: lines, rejoined with a newline — that is what
+                        // keeps the reply and its parenthesised gloss on separate lines.
+                        var name = 'token', parts = [];
+                        frame.split('\n').forEach(function (line) {
+                            if (line.indexOf('event:') === 0) name = line.slice(6).trim();
+                            else if (line.indexOf('data:') === 0) parts.push(line.slice(5).replace(/^ /, ''));
+                        });
+                        var data = parts.join('\n');
+
+                        if (name === 'meta') {
+                            try {
+                                sources = (JSON.parse(data) || {}).sources || [];
+                            } catch (e) { /* metadata is optional */ }
+                            continue;
+                        }
+
+                        ensureBubble();
+                        raw += data;
+                        // Only line 1 streams into view — the gloss stays behind its pill.
+                        bot.setText(visible(raw).split('\n')[0]);
+                        bot.body.appendChild(el('span', 'caret'));
+                        scrollDown();
+                    }
+                    return pump();
+                });
+            }
+            return pump();
+        }).then(finish).catch(function (err) {
+            if (stopped) { finish(); return; }
+            settle();
+            thinking.remove();
+            if (bot && !raw) bot.node.remove();
+            setOnline(false);
+            console.error('chat stream failed', err);
+            showError(userNode, text);
+        });
+
+        function settle() {
+            if (streamAbort === controller) streamAbort = null;
+        }
+
+        function finish() {
+            if (settled) return;
+            settled = true;
+            settle();
+            thinking.remove();
+
+            if (!bot || !raw.trim()) {
+                if (bot) bot.node.remove();
+                showError(userNode, text);
+                return;
+            }
+            if (streamRow) streamRow.remove();
+
+            var offTopic = raw.replace(/^\s+/, '').indexOf(MARK) === 0;
+            var clean = visible(raw).trim();
+            var lines = clean.split('\n');
+            var reply = (lines[0] || '').trim();
+
+            // Line 2 is the parenthesised gloss (GroqService.splitReply's contract);
+            // whatever else came back stays in the body so bullets survive.
+            var translation = null, bodyLines = [];
+            lines.forEach(function (line, i) {
+                var trimmed = line.trim();
+                if (i > 0 && translation === null &&
+                    trimmed.charAt(0) === '(' && trimmed.charAt(trimmed.length - 1) === ')') {
+                    translation = trimmed.slice(1, -1).trim();
+                } else {
+                    bodyLines.push(line);
+                }
+            });
+
+            if (offTopic) bot.markDeclined();
+            bot.setText(bodyLines.join('\n').trim() || reply);
+
+            if (stopped) {
+                var row = el('div', 'streamrow done');
+                row.appendChild(el('span', 'live'));
+                row.appendChild(el('span', null, s.stopped));
+                bot.node.appendChild(row);
             }
 
-            finalizeBotMessage(botBubble, rawText);
-            document.getElementById('speakBtn').disabled = false;
-            setStatus('Ready', 'ok');
-
-        } catch (err) {
-            document.getElementById('thinking').classList.remove('show');
-            setStatus('Network error', 'err');
-            showError('Could not reach the server: ' + err.message);
-            if (botBubble && !rawText) botBubble.closest('.msg').remove();
+            bot.setActions(translation, sources);
+            scrollDown();
+            if (speakReplies) speak(reply, replyLang);
         }
     }
 
-    // ── Text-to-Speech (Output) ──────────────────
-    function speakLast() {
-        if (!lastBotText) return;
-        if (window.speechSynthesis.speaking) {
-            window.speechSynthesis.cancel();
-            document.getElementById('speakBtn').textContent = '🔊 Speak';
-            return;
-        }
-
-        const utt  = new SpeechSynthesisUtterance(lastBotText);
-        utt.lang   = currentLang;
-        utt.rate   = 0.9;
-        utt.pitch  = 1.05;
-
-        const voices     = window.speechSynthesis.getVoices();
-        const langCode   = currentLang.split('-')[0];
-        const indicVoice = voices.find(v => v.lang.startsWith(langCode))
-                        || voices.find(v => v.lang.includes('IN'))
-                        || null;
-        if (indicVoice) utt.voice = indicVoice;
-
-        utt.onstart = () => {
-            setStatus('Speaking...', 'ok');
-            document.getElementById('speakBtn').textContent = '⏹ Stop';
-        };
-        utt.onend = () => {
-            setStatus('Ready', 'ok');
-            document.getElementById('speakBtn').textContent = '🔊 Speak';
-        };
-
+    // ── Read the reply aloud (Web Speech API) ─────────────────
+    function speak(text, lang) {
+        if (!text || !window.speechSynthesis) return;
+        window.speechSynthesis.cancel();
+        var utt = new SpeechSynthesisUtterance(text);
+        utt.lang = LANG_META[lang].code;
+        utt.rate = 0.95;
+        var voices = window.speechSynthesis.getVoices();
+        var match = voices.filter(function (v) { return v.lang.indexOf(lang) === 0; })[0]
+                 || voices.filter(function (v) { return v.lang.indexOf('IN') !== -1; })[0];
+        if (match) utt.voice = match;
         window.speechSynthesis.speak(utt);
     }
 
-    // Pre-load voices for TTS
     if (window.speechSynthesis) {
         window.speechSynthesis.getVoices();
-        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = function () { window.speechSynthesis.getVoices(); };
     }
+
+    // ── Voice input (Groq Whisper) ────────────────────────────
+    // Phase 2 designs the voice-first shell; Phase 1 keeps the shipped
+    // transcribe path behind a quiet mic in the composer.
+    $('micBtn').addEventListener('click', function () {
+        if (recording) {
+            if (recorder && recorder.state !== 'inactive') {
+                recorder.stop();
+                recorder.stream.getTracks().forEach(function (tr) { tr.stop(); });
+            }
+            return;
+        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            flashPlaceholder(t().micError);
+            return;
+        }
+
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+            recorder = new MediaRecorder(stream);
+            var chunks = [];
+            recorder.ondataavailable = function (e) { if (e.data.size > 0) chunks.push(e.data); };
+            recorder.onstart = function () {
+                recording = true;
+                $('micBtn').classList.add('recording');
+                input.placeholder = t().listening;
+            };
+            recorder.onstop = function () {
+                recording = false;
+                $('micBtn').classList.remove('recording');
+                input.placeholder = t().placeholder;
+                transcribe(new Blob(chunks, { type: 'audio/webm' }));
+            };
+            recorder.start();
+        }).catch(function (err) {
+            console.error('microphone unavailable', err);
+            flashPlaceholder(t().micError);
+        });
+    });
+
+    function flashPlaceholder(message) {
+        input.placeholder = message;
+        setTimeout(function () { input.placeholder = t().placeholder; }, 4000);
+    }
+
+    function transcribe(blob) {
+        var form = new FormData();
+        form.append('audio', blob);
+        form.append('language', LANG_META[uiLang].code);
+
+        fetch('/api/transcribe', { method: 'POST', body: form })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success || !data.text) throw new Error(data.error || 'empty transcript');
+                speakReplies = true;   // a spoken question earns a spoken answer
+                send(data.text);
+            })
+            .catch(function (err) {
+                console.error('transcription failed', err);
+                flashPlaceholder(t().sttError);
+            });
+    }
+
+    // ── Boot ──────────────────────────────────────────────────
+    applyLang();
+    setOnline(navigator.onLine);
+    resetThread();
+    refreshSend();
+})();
 </script>
 
 </body>

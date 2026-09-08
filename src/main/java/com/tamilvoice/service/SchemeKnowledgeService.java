@@ -58,15 +58,23 @@ public class SchemeKnowledgeService {
                                 String sourceUrl) {}
 
     /**
+     * An official scheme link surfaced to the UI as an "ஆதாரம் / Source" pill
+     * under the reply. {@code host} is the bare domain shown on the pill face.
+     */
+    public record SchemeSource(String schemeId, String label, String url, String host) {}
+
+    /**
      * Outcome of a knowledge-base lookup.
      *
      * @param context     formatted grounding block for the system prompt, or "" if nothing matched
      * @param topScore    score of the best-matching scheme (0 = nothing matched at all)
      * @param matchedIds  ids of the schemes injected, best first
+     * @param sources     official links for the injected schemes, best first (may be empty)
      */
-    public record MatchResult(String context, int topScore, List<String> matchedIds) {
+    public record MatchResult(String context, int topScore, List<String> matchedIds,
+                              List<SchemeSource> sources) {
 
-        static final MatchResult EMPTY = new MatchResult("", 0, List.of());
+        static final MatchResult EMPTY = new MatchResult("", 0, List.of(), List.of());
 
         /** True when the knowledge base had nothing confident to say about this query. */
         public boolean isGap() {
@@ -170,10 +178,28 @@ public class SchemeKnowledgeService {
         List<String> matchedIds = scored.stream().map(s -> s.scheme().id()).toList();
         int topScore = scored.get(0).score();
 
+        // Only schemes that actually carry an official URL become source pills.
+        List<SchemeSource> sources = scored.stream()
+                .map(Scored::scheme)
+                .filter(sc -> !sc.sourceUrl().isBlank())
+                .map(sc -> new SchemeSource(sc.id(), sc.name(), sc.sourceUrl(), hostOf(sc.sourceUrl())))
+                .toList();
+
         log.debug("Scheme context injected for query '{}': {} schemes (top score: {})",
                 truncate(query), scored.size(), topScore);
 
-        return new MatchResult(sb.toString(), topScore, matchedIds);
+        return new MatchResult(sb.toString(), topScore, matchedIds, sources);
+    }
+
+    /** Bare domain for the pill face — "https://www.cmchistn.com/x" becomes "cmchistn.com". */
+    private static String hostOf(String url) {
+        try {
+            String host = java.net.URI.create(url.trim()).getHost();
+            if (host == null) return url;
+            return host.startsWith("www.") ? host.substring(4) : host;
+        } catch (IllegalArgumentException e) {
+            return url;
+        }
     }
 
     private static String truncate(String s) {
