@@ -731,6 +731,16 @@
         return n;
     }
 
+    // Models occasionally emit HTML entities (e.g. "&nbsp;") in plain-text
+    // replies. Decode them via a detached <textarea> — browsers never execute
+    // markup placed there, so this is safe even though the input is untrusted —
+    // and the result is still only ever inserted with textContent, never innerHTML.
+    var entityDecoder = document.createElement('textarea');
+    function decodeEntities(text) {
+        entityDecoder.innerHTML = text;
+        return entityDecoder.value;
+    }
+
     function scrollDown() { thread.scrollTop = thread.scrollHeight; }
 
     // ── Interface language ────────────────────────────────────
@@ -1053,7 +1063,8 @@
         // Strip the scope marker from anything the reader sees.
         function visible(value) {
             var v = value.replace(/^\s+/, '');
-            return v.indexOf(MARK) === 0 ? v.slice(MARK.length).replace(/^\s+/, '') : value;
+            var stripped = v.indexOf(MARK) === 0 ? v.slice(MARK.length).replace(/^\s+/, '') : value;
+            return decodeEntities(stripped);
         }
 
         fetch('/api/chat/stream', {
@@ -1090,7 +1101,10 @@
                         var name = 'token', parts = [];
                         frame.split('\n').forEach(function (line) {
                             if (line.indexOf('event:') === 0) name = line.slice(6).trim();
-                            else if (line.indexOf('data:') === 0) parts.push(line.slice(5).replace(/^ /, ''));
+                            // Spring's SseEmitter writes "data:" with no separator space, so a
+                            // leading space here is real token content (word-initial BPE tokens
+                            // start with one) — stripping it would glue every word together.
+                            else if (line.indexOf('data:') === 0) parts.push(line.slice(5));
                         });
                         var data = parts.join('\n');
 
