@@ -342,6 +342,8 @@ public class GroqService {
               general knowledge, politics, entertainment, or other topics. The marker goes on
               line 1 only — never on line 2.
             - NEVER add extra lines, disclaimers, or preambles — just the two lines above.
+            - Output plain text only — normal spaces, no HTML tags or HTML entities
+              (e.g. write a real space, never "&nbsp;").
             """,
             replyLanguage,
             glossLanguage,
@@ -391,6 +393,10 @@ public class GroqService {
         String[] lines = text.split("\\n");
 
         String mainReply = lines[0].trim();
+        boolean outOfScope = mainReply.startsWith(OFF_TOPIC_MARKER);
+        if (outOfScope) {
+            mainReply = mainReply.substring(OFF_TOPIC_MARKER.length()).stripLeading();
+        }
         String translation = null;
 
         // Look for an English translation line in parentheses
